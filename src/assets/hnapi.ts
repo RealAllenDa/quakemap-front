@@ -1,6 +1,10 @@
 import axios from "axios";
 import type { IFetchGeoJsonConfig } from "@/interfaces/parsing/GeoJson";
 import { useGeoJsonStore } from "@/stores/geojson";
+import type { App } from "vue";
+import * as Sentry from "@sentry/vue";
+import type { Router } from "vue-router";
+import { BrowserTracing } from "@sentry/tracing";
 
 class _ReqFailedErr extends Error {
   constructor(error: Error) {
@@ -13,7 +17,7 @@ class HNAPI {
   private readonly mode = import.meta.env.MODE;
   private readonly color = this.mode === "production" ? "#43bb88" : "orange";
   private readonly useProductionAPI: boolean;
-  private readonly apiUrl: string;
+  private readonly apiUrl: [string, string];
   private readonly logo = atob(
     "JWMgICBfX18gICAgICAgICAgICAgIF8gICAgICAgIF9fICBfXyAgICAgICAgICAgICAKICAvIF8gXCBfICAgXyAgX18gX3wgfCBfX19fX3wgIFwvICB8IF9fIF8gXyBfXyAgCiB8IHwgfCB8IHwgfCB8LyBfYCB8IHwvIC8gXyBcIHxcL3wgfC8gX2AgfCAnXyBcIAogfCB8X3wgfCB8X3wgfCAoX3wgfCAgIDwgIF9fLyB8ICB8IHwgKF98IHwgfF8pIHwKICBcX19cX1xcX18sX3xcX18sX3xffFxfXF9fX3xffCAgfF98XF9fLF98IC5fXy8gCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgfF98ICAgIA=="
   );
@@ -23,12 +27,12 @@ class HNAPI {
     this.useProductionAPI = useProductionAPI;
     if (this.mode === "development") {
       if (!useProductionAPI) {
-        this.apiUrl = "http://127.0.0.1:8001";
+        this.apiUrl = ["http://", "127.0.0.1:8001"];
       } else {
-        this.apiUrl = "https://back.quake.daziannetwork.com";
+        this.apiUrl = ["https://", "back.quake.daziannetwork.com"];
       }
     } else {
-      this.apiUrl = "https://back.quake.daziannetwork.com";
+      this.apiUrl = ["https://", "back.quake.daziannetwork.com"];
     }
   }
 
@@ -66,6 +70,25 @@ class HNAPI {
     }
   }
 
+  initializeSentry(app: App, router: Router) {
+    Sentry.init({
+      app,
+      dsn: "https://32e5d1dfc4504687ae75b16fa1e7b1f2@sentry.mightyhub.net/4",
+      integrations: [
+        new BrowserTracing({
+          routingInstrumentation: Sentry.vueRouterInstrumentation(router),
+          tracePropagationTargets: [this.apiUrl[1]],
+        }),
+      ],
+      tracesSampleRate: this.mode === "production" ? 0.75 : 1.0,
+      environment: this.mode,
+      release: `quakemap-front@${this.version}`,
+      logErrors: true,
+    });
+
+    hnapi.info("Sentry initialized.");
+  }
+
   async initialize(fetchGeoJsonConfig: IFetchGeoJsonConfig): Promise<void> {
     await this.fetchGeoJson(fetchGeoJsonConfig);
     // eslint-disable-next-line no-console
@@ -86,7 +109,7 @@ class HNAPI {
   async makeApiRequest(url: string, timeout = 0): Promise<never> {
     return new Promise((resolve, reject) => {
       axios
-        .get(`${this.apiUrl}${url}`, {
+        .get(`${this.apiUrl.join("")}${url}`, {
           timeout,
         })
         .then((response: any) => {
@@ -110,12 +133,12 @@ class HNAPI {
 
   warn(...text: any[]) {
     // eslint-disable-next-line no-console
-    console.log("%c[WARN]", "color: yellow; font-weight: bold;", ...text);
+    console.warn("%c[WARN]", "color: yellow; font-weight: bold;", ...text);
   }
 
   error(...text: any[]) {
     // eslint-disable-next-line no-console
-    console.log("%c[ERROR]", "color: red; font-weight: bold;", ...text);
+    console.error("%c[ERROR]", "color: red; font-weight: bold;", ...text);
   }
 }
 
