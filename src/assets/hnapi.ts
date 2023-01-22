@@ -25,10 +25,10 @@ class HNAPI {
       if (!useProductionAPI) {
         this.apiUrl = "http://127.0.0.1:8001";
       } else {
-        this.apiUrl = "https://eqweb.daziannetwork.com";
+        this.apiUrl = "https://back.quake.daziannetwork.com";
       }
     } else {
-      this.apiUrl = "https://eqweb.daziannetwork.com";
+      this.apiUrl = "https://back.quake.daziannetwork.com";
     }
   }
 
