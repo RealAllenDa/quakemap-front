@@ -1,0 +1,81 @@
+@font-face {
+  font-family: B612;
+  src: url("@/assets/font/B612-Regular.ttf");
+}
+@font-face {
+  font-family: Geometos;
+  src: url("@/assets/font/Geometos.ttf");
+}
+body {
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  color: white;
+  font-family: B612, sans-serif;
+  background: #1c6167;
+}
+
+.intensity-1 {
+  background: #46646e !important;
+}
+
+.intensity-2 {
+  background: #1e6ee6 !important;
+}
+
+.intensity-3 {
+  background: #00c8c8 !important;
+  color: black !important;
+}
+
+.intensity-4 {
+  background: #fafa64 !important;
+  color: black !important;
+}
+
+.intensity-5 {
+  background: #ffb400 !important;
+  color: black !important;
+}
+
+.intensity-5_and_up {
+  background: yellow !important;
+  color: black !important;
+}
+
+.intensity-6 {
+  background: #ff7800 !important;
+  color: black !important;
+}
+
+.intensity-7 {
+  background: #e60000 !important;
+}
+
+.intensity-8 {
+  background: #a00000 !important;
+}
+
+.intensity-9 {
+  background: #960096 !important;
+}
+
+.intensity-unknown {
+  background: #666666 !important;
+}
+
+.info-background {
+  background: #3d4344;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+.leaflet-control-attribution {
+  color: white !important;
+  background: rgba(29, 29, 29, 0.3) !important;
+}
+
+/*# sourceMappingURL=generic.css.map */

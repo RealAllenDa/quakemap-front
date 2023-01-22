@@ -1,0 +1,353 @@
+<template>
+  <div id="main-container">
+    <eq-info-container v-if="!showEEW"></eq-info-container>
+    <quake-map v-if="mapReady" ref="quakeMapInstance"></quake-map>
+    <eew-info-container v-if="showEEW"></eew-info-container>
+  </div>
+</template>
+
+<script lang="ts" setup>
+import type { Ref } from "vue";
+import { nextTick, onMounted, ref } from "vue";
+import hnapi from "@/assets/hnapi";
+import EqInfoContainer from "@/components/map/eq-info-container.vue";
+import type {
+  IQuakeInfo,
+  ITsunamiComments,
+} from "@/interfaces/parsing/QuakeInfo";
+import type { IInfo, IInfoMocked } from "@/interfaces/api/QuakeInfo";
+import { isEqual } from "lodash";
+import QuakeMap from "@/components/map/quake-map.vue";
+import EewInfoContainer from "@/components/map/eew-info-container.vue";
+import type { IEEW } from "@/interfaces/parsing/EEW";
+import { useEqInfoStore } from "@/stores/eq-info";
+import { useEEWInfoStore } from "@/stores/eew-info";
+
+const updateTimer: Ref<null | ReturnType<typeof setInterval>> = ref(null);
+const updateInterval = ref(2500);
+
+const lastInfo: Ref<object | null> = ref(null);
+const mapReady = ref(false);
+
+const showEEW = ref(false);
+const eewInEffect = ref(false);
+
+const messagesBeforeEEW: Ref<IQuakeInfo[] | null> = ref(null);
+const lastEEWReportNum = ref("-1");
+const suspendEEWUntilNumberChange = ref(false);
+
+const activeEews = ref<Record<string, string>>({});
+const currentEewId = ref("");
+const currentEarthquakeInformation = ref<IInfoMocked>({
+  info: [],
+});
+
+const quakeMapInstance = ref<InstanceType<typeof QuakeMap>>();
+const eqStore = useEqInfoStore();
+const eewStore = useEEWInfoStore();
+
+function setBannerContent(content: ITsunamiComments) {
+  eqStore.$patch({
+    tsunamiCommentsDomestic: content.domestic,
+    tsunamiCommentsForeign: content.foreign,
+  });
+}
+
+function displayEarthquakeInformation(content: IQuakeInfo) {
+  eqStore.setHypocenter(content.hypocenter);
+  eqStore.setMagnitude(content.magnitude);
+  eqStore.occurTime = content.occur_time;
+  setBannerContent({
+    domestic: content.tsunami_comments.domestic,
+    foreign: content.tsunami_comments.foreign,
+  });
+}
+
+function displayEEWInformation(content: IEEW) {
+  eqStore.setHypocenter(content.hypocenter);
+  eqStore.setMagnitude(content.magnitude);
+  eqStore.occurTime = content.report_time;
+}
+
+function parseEEWInformation(result: IInfo, mapUpdateOnly = false) {
+  if (quakeMapInstance.value === undefined) {
+    hnapi.error("Map has not yet been initialized!");
+    return;
+  }
+  showEEW.value = true;
+  if (result.eew.is_cancel) {
+    showEEW.value = false;
+    eewStore.$patch({
+      eewIsDrill: false,
+      eewIsExpected: false,
+    });
+    quakeMapInstance.value.deleteAllLayers();
+    parseEarthquakeInformation(result);
+    return;
+  }
+  if (!mapUpdateOnly) {
+    displayEEWInformation(result.eew);
+    eewStore.eewIsPlum = result.eew.is_plum;
+    eqStore.maximumIntensity = result.eew.max_intensity;
+    if (result.eew.is_final) {
+      eewStore.eewReportNum = `#${result.eew.report_num}-F`;
+    } else {
+      eewStore.eewReportNum = `#${result.eew.report_num}`;
+    }
+    if (parseInt(result.eew.report_flag) === 0) {
+      eewStore.eewType = "Forecast";
+    } else if (parseInt(result.eew.report_flag) === 1) {
+      eewStore.eewType = "Warning";
+    }
+    if (result.eew.max_intensity === "0" || result.eew.is_plum) {
+      eewStore.eewAdvice = "Wait";
+    } else if (parseInt(result.eew.hypocenter.depth.slice(0, -2)) >= 100) {
+      eewStore.eewAdvice = "Deep";
+    } else if (parseFloat(result.eew.magnitude) >= 6.0) {
+      eewStore.eewAdvice = "StayAway";
+    } else {
+      eewStore.eewAdvice = "PayAttention";
+    }
+    eewStore.eewIsDrill = result.eew.is_test;
+  }
+  quakeMapInstance.value.deleteAllLayers();
+  nextTick(() => {
+    quakeMapInstance.value.addEpicenter(result.eew.hypocenter);
+    if (result.eew.area_coloring.recommended_areas) {
+      if (!isEqual({}, result.eew.area_coloring.areas)) {
+        quakeMapInstance.value.addMapIntensities(
+          result.eew.area_coloring.areas
+        );
+        quakeMapInstance.value.addMapColoring(result.eew.area_coloring.areas);
+      } else {
+        hnapi.warn("Areas equals null. Check server status.");
+      }
+    } else {
+      if (!isEqual(result.eew.area_intensity, {})) {
+        quakeMapInstance.value.addMapIntensities(result.eew.area_intensity);
+      } else {
+        hnapi.warn("No points exist. Check server status.");
+      }
+    }
+    quakeMapInstance.value.parseMapScale(true);
+  });
+
+  eewStore.eewIsExpected = true;
+
+  if (result.eew.s_wave !== null) {
+    quakeMapInstance.value.addWaveCircle(
+      result.eew.hypocenter,
+      result.eew.s_wave,
+      "s"
+    );
+  } else {
+    hnapi.warn("S wave time equals null. Check server status.");
+  }
+  if (result.eew.p_wave !== null) {
+    quakeMapInstance.value.addWaveCircle(
+      result.eew.hypocenter,
+      result.eew.p_wave,
+      "p"
+    );
+  } else {
+    hnapi.warn("P wave time equals null. Check server status.");
+  }
+}
+
+function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
+  if (quakeMapInstance.value === undefined) {
+    hnapi.error("Map has not yet been initialized!");
+    return;
+  }
+  showEEW.value = false;
+  result.info.forEach((content: IQuakeInfo) => {
+    eqStore.currentType = content.type;
+    if (
+      parseInt(content.max_intensity) === 99999 ||
+      parseInt(content.max_intensity) === -1
+    ) {
+      content.max_intensity = "-1";
+    }
+
+    if (content.type !== "Destination") {
+      currentEarthquakeInformation.value.info = [content];
+    }
+
+    if (content.type === "ScalePrompt") {
+      eqStore.$patch({
+        maximumIntensity: content.max_intensity,
+        occurTime: content.occur_time,
+      });
+      quakeMapInstance.value.deleteAllLayers();
+      nextTick(() => {
+        quakeMapInstance.value.addMapIntensities(content.area_intensity.areas);
+        quakeMapInstance.value.addMapColoring(content.area_intensity.areas);
+        setBannerContent({
+          domestic: content.tsunami_comments.domestic,
+          foreign: content.tsunami_comments.foreign,
+        });
+        quakeMapInstance.value.parseMapScale();
+      });
+    } else if (content.type === "Destination") {
+      parseEarthquakeInformation(currentEarthquakeInformation.value);
+      displayEarthquakeInformation(content);
+      quakeMapInstance.value.addEpicenter(content.hypocenter);
+      quakeMapInstance.value.parseMapScale();
+    } else if (content.type === "ScaleAndDestination") {
+      eqStore.maximumIntensity = content.max_intensity;
+      displayEarthquakeInformation(content);
+      quakeMapInstance.value.deleteAllLayers();
+      nextTick(() => {
+        setBannerContent({
+          domestic: content.tsunami_comments.domestic,
+          foreign: content.tsunami_comments.foreign,
+        });
+        quakeMapInstance.value.addEpicenter(content.hypocenter);
+        quakeMapInstance.value.addMapIntensities(content.area_intensity.areas);
+        quakeMapInstance.value.addMapColoring(content.area_intensity.areas);
+        quakeMapInstance.value.parseMapScale();
+      });
+    } else if (content.type === "DetailScale") {
+      displayEarthquakeInformation(content);
+      eqStore.maximumIntensity = content.max_intensity;
+      quakeMapInstance.value.deleteAllLayers();
+      nextTick(() => {
+        quakeMapInstance.value.addMapIntensities(
+          content.area_intensity.station
+        );
+        quakeMapInstance.value.addEpicenter(content.hypocenter);
+        quakeMapInstance.value.parseMapScale();
+      });
+    } else if (content.type === "Foreign") {
+      displayEarthquakeInformation(content);
+      eqStore.maximumIntensity = content.max_intensity;
+      quakeMapInstance.value.deleteAllLayers();
+      nextTick(() => {
+        quakeMapInstance.value.addEpicenter(content.hypocenter);
+        quakeMapInstance.value.setForeignEarthquake(content.hypocenter);
+      });
+    }
+  });
+}
+
+function updateInfo() {
+  mapReady.value = true;
+  hnapi
+    .makeApiRequest("/api/earthquake_info", updateInterval.value)
+    .then((result: IInfo) => {
+      hnapi.debug(result);
+
+      if (!result.eew || !result.info) {
+        hnapi.error("Message format incorrect. Skipping.");
+        return;
+      } else if (isEqual([], result.info)) {
+        hnapi.warn("No earthquake info available.");
+      }
+
+      if (isEqual(lastInfo.value, result)) {
+        hnapi.debug("Identical information. Skipping.");
+        return;
+      } else {
+        hnapi.debug("Updated information. Parsing.");
+        lastInfo.value = result;
+      }
+
+      if (result.eew.status === 0) {
+        hnapi.debug("EEW Received. Parsing...");
+        if (!eewInEffect.value) {
+          hnapi.debug("EEW first received.");
+          messagesBeforeEEW.value = result.info;
+          eewInEffect.value = true;
+          lastEEWReportNum.value = "-1";
+          currentEewId.value = result.eew.report_id;
+          activeEews.value = {};
+          activeEews.value[currentEewId.value] = result.eew.report_num;
+
+          parseEEWInformation(result, false);
+          return;
+        }
+
+        if (!isEqual(result.info, messagesBeforeEEW.value)) {
+          hnapi.info(
+            "Earthquake info updated. Displaying new earthquake info."
+          );
+          messagesBeforeEEW.value = result.info;
+          suspendEEWUntilNumberChange.value = true;
+          parseEarthquakeInformation(result);
+          return;
+        }
+
+        if (currentEewId.value !== result.eew.report_id) {
+          hnapi.info("Different EEW (report_id). Displaying.");
+          suspendEEWUntilNumberChange.value = false;
+          currentEewId.value = result.eew.report_id;
+          activeEews.value[currentEewId.value] = result.eew.report_num;
+          parseEEWInformation(result);
+        } else if (
+          parseInt(result.eew.report_num) >
+          parseInt(activeEews.value[currentEewId.value])
+        ) {
+          hnapi.info("EEW updated (num != last_num). Displaying.");
+          activeEews.value[currentEewId.value] = result.eew.report_num;
+          suspendEEWUntilNumberChange.value = false;
+          parseEEWInformation(result);
+        } else if (!suspendEEWUntilNumberChange.value) {
+          hnapi.info("Parameters updated. Displaying EEW.");
+          parseEEWInformation(result, true);
+        }
+      } else {
+        eewInEffect.value = false;
+        activeEews.value = {};
+        currentEewId.value = "";
+        parseEarthquakeInformation(result);
+      }
+    });
+}
+
+onMounted(async () => {
+  await hnapi
+    .initialize({
+      japan: true,
+      countries: true,
+      japanWithSubAreas: true,
+    })
+    .then(() => {
+      nextTick(() => {
+        updateTimer.value = setInterval(updateInfo, updateInterval.value);
+      });
+    });
+});
+</script>
+
+<style lang="scss">
+#main-container {
+  width: 750px;
+  height: 675px;
+}
+
+.window {
+  width: 100%;
+  height: 185px;
+  display: grid;
+  box-sizing: border-box;
+}
+
+.sub-window {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.label {
+  display: inline-block;
+  font-size: 20px;
+  width: 100px;
+  margin-left: 10px;
+}
+
+.label-content {
+  font-size: 23px;
+  font-weight: bold;
+  margin-left: 23px;
+}
+</style>

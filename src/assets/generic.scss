@@ -1,0 +1,83 @@
+@import "./colors.scss";
+
+@font-face {
+  font-family: B612;
+  src: url("@/assets/font/B612-Regular.ttf");
+}
+
+@font-face {
+  font-family: Geometos;
+  src: url("@/assets/font/Geometos.ttf");
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  color: white;
+  font-family: B612, sans-serif;
+  background: $background-color;
+}
+
+.intensity-1 {
+  background: $intensity-1 !important;
+}
+
+.intensity-2 {
+  background: $intensity-2 !important;
+}
+
+.intensity-3 {
+  background: $intensity-3 !important;
+  color: black !important;
+}
+
+.intensity-4 {
+  background: $intensity-4 !important;
+  color: black !important;
+}
+
+.intensity-5 {
+  background: $intensity-5 !important;
+  color: black !important;
+}
+
+.intensity-5_and_up {
+  background: $intensity-5-and-up !important;
+  color: black !important;
+}
+
+.intensity-6 {
+  background: $intensity-6 !important;
+  color: black !important;
+}
+
+.intensity-7 {
+  background: $intensity-7 !important;
+}
+
+.intensity-8 {
+  background: $intensity-8 !important;
+}
+
+.intensity-9 {
+  background: $intensity-9 !important;
+}
+
+.intensity-unknown {
+  background: $intensity-0 !important;
+}
+
+.info-background {
+  background: $info-background-color;
+}
+
+.bold {
+  @include bold;
+}
+
+.leaflet-control-attribution {
+  color: white !important;
+  background: rgba(29, 29, 29, 0.3) !important;
+}
