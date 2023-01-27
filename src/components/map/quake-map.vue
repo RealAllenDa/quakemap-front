@@ -212,6 +212,9 @@ function addWaveCircle(
   type: string
 ): void {
   if (type === "s") {
+    if (sWaveCircle.value !== undefined) {
+      map.value!.removeLayer(sWaveCircle.value);
+    }
     sWaveCircle.value = L.circle(
       [epicenter.latitude, epicenter.longitude],
       waveDistance * 1000,
@@ -219,6 +222,9 @@ function addWaveCircle(
     );
     sWaveCircle.value!.addTo(map.value!);
   } else if (type === "p") {
+    if (pWaveCircle.value !== undefined) {
+      map.value!.removeLayer(pWaveCircle.value);
+    }
     pWaveCircle.value = L.circle(
       [epicenter.latitude, epicenter.longitude],
       waveDistance * 1000,
