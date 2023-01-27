@@ -12,6 +12,12 @@ const router = createRouter({
       component: () => import("@/views/QuakeMapView.vue"),
       meta: { title: "QuakeMap" },
     },
+    {
+      path: "/shake_level",
+      name: "shakeLevel",
+      component: () => import("@/views/ShakeLevelView.vue"),
+      meta: { title: "Shake Level" },
+    },
   ],
 });
 
