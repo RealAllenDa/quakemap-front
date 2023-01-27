@@ -69,7 +69,7 @@ function psWaveTimeRefresh(result: IInfo) {
   parsePSWaveTime(depth, timePassed);
   // noinspection JSIncompatibleTypesComparison
   if (psWaveTime.value[1] !== undefined) {
-    quakeMapInstance.value.addWaveCircle(
+    quakeMapInstance.value!.addWaveCircle(
       result.eew.hypocenter,
       psWaveTime.value[1],
       "s"
@@ -77,7 +77,7 @@ function psWaveTimeRefresh(result: IInfo) {
   }
   // noinspection JSIncompatibleTypesComparison
   if (psWaveTime.value[0] !== undefined) {
-    quakeMapInstance.value.addWaveCircle(
+    quakeMapInstance.value!.addWaveCircle(
       result.eew.hypocenter,
       psWaveTime.value[0],
       "p"
