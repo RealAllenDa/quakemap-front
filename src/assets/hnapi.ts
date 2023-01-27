@@ -21,7 +21,7 @@ class HNAPI {
   private readonly logo = atob(
     "JWMgICBfX18gICAgICAgICAgICAgIF8gICAgICAgIF9fICBfXyAgICAgICAgICAgICAKICAvIF8gXCBfICAgXyAgX18gX3wgfCBfX19fX3wgIFwvICB8IF9fIF8gXyBfXyAgCiB8IHwgfCB8IHwgfCB8LyBfYCB8IHwvIC8gXyBcIHxcL3wgfC8gX2AgfCAnXyBcIAogfCB8X3wgfCB8X3wgfCAoX3wgfCAgIDwgIF9fLyB8ICB8IHwgKF98IHwgfF8pIHwKICBcX19cX1xcX18sX3xcX18sX3xffFxfXF9fX3xffCAgfF98XF9fLF98IC5fXy8gCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgfF98ICAgIA=="
   );
-  private readonly version = "0.1.0";
+  private readonly version = import.meta.env.VITE_RELEASE;
 
   constructor(useProductionAPI = false) {
     this.useProductionAPI = useProductionAPI;
@@ -80,7 +80,8 @@ class HNAPI {
           tracePropagationTargets: [this.apiUrl[1]],
         }),
       ],
-      tracesSampleRate: this.mode === "production" ? 0.75 : 1.0,
+      tracesSampleRate: this.mode === "production" ? 1.0 : 1.0,
+      sampleRate: this.mode === "production" ? 1.0 : 1.0,
       environment: this.mode,
       release: `quakemap-front@${this.version}`,
       logErrors: true,
@@ -142,5 +143,5 @@ class HNAPI {
   }
 }
 
-const hnapi = new HNAPI();
+const hnapi = new HNAPI(false);
 export default hnapi;
