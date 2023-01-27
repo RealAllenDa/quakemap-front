@@ -16,8 +16,8 @@ const store = useEqInfoStore();
 
 const tsunamiComments = computed(() => {
   return props.type === "foreign"
-    ? store.domesticLookupTable[store.tsunamiCommentsDomestic]
-    : store.foreignLookupTable[store.tsunamiCommentsForeign];
+    ? store.foreignLookupTable[store.tsunamiCommentsForeign]
+    : store.domesticLookupTable[store.tsunamiCommentsDomestic];
 });
 const className = computed(() => {
   return props.type === "foreign"
