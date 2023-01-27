@@ -8,7 +8,7 @@
 
 <script lang="ts" setup>
 import type { Ref } from "vue";
-import { nextTick, onMounted, ref } from "vue";
+import { nextTick, onMounted, onUnmounted, ref } from "vue";
 import hnapi from "@/assets/hnapi";
 import EqInfoContainer from "@/components/map/eq-info-container.vue";
 import type {
@@ -22,7 +22,10 @@ import EewInfoContainer from "@/components/map/eew-info-container.vue";
 import type { IEEW } from "@/interfaces/parsing/EEW";
 import { useEqInfoStore } from "@/stores/eq-info";
 import { useEEWInfoStore } from "@/stores/eew-info";
+import { PSWAVE_TIME } from "@/assets/pswave";
 
+const psWaveTime = ref<[number?, number?]>([]);
+const psWaveUpdateTimer: Ref<ReturnType<typeof setInterval> | null> = ref(null);
 const updateTimer: Ref<null | ReturnType<typeof setInterval>> = ref(null);
 const updateInterval = ref(2500);
 
@@ -45,6 +48,85 @@ const currentEarthquakeInformation = ref<IInfoMocked>({
 const quakeMapInstance = ref<InstanceType<typeof QuakeMap>>();
 const eqStore = useEqInfoStore();
 const eewStore = useEEWInfoStore();
+
+onUnmounted(() => {
+  if (updateTimer.value !== null) {
+    clearInterval(updateTimer.value);
+  }
+  if (psWaveUpdateTimer.value !== null) {
+    clearInterval(psWaveUpdateTimer.value);
+  }
+});
+
+function psWaveTimeRefresh(result: IInfo) {
+  let depth, timePassed;
+  if (result.eew.hypocenter.depth === "Unknown") {
+    depth = -999;
+  } else {
+    depth = parseInt(result.eew.hypocenter.depth.replace("km", ""));
+  }
+  timePassed = new Date().getTime() / 1000 + 3600 - result.eew.occur_timestamp;
+  parsePSWaveTime(depth, timePassed);
+  // noinspection JSIncompatibleTypesComparison
+  if (psWaveTime.value[1] !== undefined) {
+    quakeMapInstance.value.addWaveCircle(
+      result.eew.hypocenter,
+      psWaveTime.value[1],
+      "s"
+    );
+  }
+  // noinspection JSIncompatibleTypesComparison
+  if (psWaveTime.value[0] !== undefined) {
+    quakeMapInstance.value.addWaveCircle(
+      result.eew.hypocenter,
+      psWaveTime.value[0],
+      "p"
+    );
+  }
+}
+
+function parsePSWaveTime(depth: number, timePassed: number) {
+  psWaveTime.value = [];
+  if (depth > 700 || timePassed > 2000) {
+    hnapi.warn("PSWave time parsing failure: time too long or too deep");
+    return;
+  }
+  const earthquakeList = PSWAVE_TIME.filter((d) => d[2] === depth);
+  if (earthquakeList.length === 0) {
+    hnapi.warn("PSWave time parsing failure: no depth corresponding");
+    return;
+  }
+
+  const sLastList = earthquakeList.filter((s) => s[1] <= timePassed);
+  const sFirstList = earthquakeList.filter((s) => s[1] >= timePassed);
+  if (sFirstList.length === 0 || sLastList.length === 0) {
+    hnapi.warn("SWave time parsing failure: no time corresponding");
+    psWaveTime.value[1] = undefined;
+  } else {
+    const sLast = sLastList.pop();
+    const sFirst = sFirstList[0];
+    // Linear interpolation
+    psWaveTime.value[1] =
+      ((timePassed - sLast![1]) / (sFirst[1] - sLast![1])) *
+        (sFirst[3] - sLast![3]) +
+      sLast![3];
+  }
+
+  const pLastList = earthquakeList.filter((s) => s[0] <= timePassed);
+  const pFirstList = earthquakeList.filter((s) => s[0] >= timePassed);
+  if (pLastList.length === 0 || pFirstList.length === 0) {
+    hnapi.warn("PWave time parsing failure: no time corresponding");
+    psWaveTime.value[0] = undefined;
+  } else {
+    const pLast = pLastList.pop();
+    const pFirst = pFirstList[0];
+    // Linear interpolation
+    psWaveTime.value[0] =
+      ((timePassed - pLast![0]) / (pFirst[0] - pLast![0])) *
+        (pFirst[3] - pLast![3]) +
+      pLast![3];
+  }
+}
 
 function setBannerContent(content: ITsunamiComments) {
   eqStore.$patch({
@@ -111,53 +193,51 @@ function parseEEWInformation(result: IInfo, mapUpdateOnly = false) {
     eewStore.eewIsDrill = result.eew.is_test;
   }
   quakeMapInstance.value.deleteAllLayers();
-  nextTick(() => {
-    quakeMapInstance.value.addEpicenter(result.eew.hypocenter);
-    if (result.eew.area_coloring.recommended_areas) {
-      if (!isEqual({}, result.eew.area_coloring.areas)) {
-        quakeMapInstance.value.addMapIntensities(
-          result.eew.area_coloring.areas
-        );
-        quakeMapInstance.value.addMapColoring(result.eew.area_coloring.areas);
-      } else {
-        hnapi.warn("Areas equals null. Check server status.");
-      }
+  quakeMapInstance.value.addEpicenter(result.eew.hypocenter);
+  if (result.eew.area_coloring.recommended_areas) {
+    if (!isEqual({}, result.eew.area_coloring.areas)) {
+      quakeMapInstance.value.addMapIntensities(result.eew.area_coloring.areas);
+      quakeMapInstance.value.addMapColoring(result.eew.area_coloring.areas);
     } else {
+      hnapi.warn("Areas equals null. Check server status.");
+
       if (!isEqual(result.eew.area_intensity, {})) {
         quakeMapInstance.value.addMapIntensities(result.eew.area_intensity);
       } else {
         hnapi.warn("No points exist. Check server status.");
       }
     }
-    quakeMapInstance.value.parseMapScale(true);
-  });
+  } else {
+    if (!isEqual(result.eew.area_intensity, {})) {
+      quakeMapInstance.value.addMapIntensities(result.eew.area_intensity);
+    } else {
+      hnapi.warn("No points exist. Check server status.");
+    }
+  }
+  quakeMapInstance.value.parseMapScale(true);
 
   eewStore.eewIsExpected = true;
 
-  if (result.eew.s_wave !== null) {
-    quakeMapInstance.value.addWaveCircle(
-      result.eew.hypocenter,
-      result.eew.s_wave,
-      "s"
-    );
-  } else {
-    hnapi.warn("S wave time equals null. Check server status.");
+  if (psWaveUpdateTimer.value !== null) {
+    clearInterval(psWaveUpdateTimer.value);
+    psWaveUpdateTimer.value = null;
   }
-  if (result.eew.p_wave !== null) {
-    quakeMapInstance.value.addWaveCircle(
-      result.eew.hypocenter,
-      result.eew.p_wave,
-      "p"
-    );
-  } else {
-    hnapi.warn("P wave time equals null. Check server status.");
-  }
+
+  // Execute immediately
+  psWaveTimeRefresh(result);
+  psWaveUpdateTimer.value = setInterval(() => {
+    psWaveTimeRefresh(result);
+  }, 500);
 }
 
 function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
   if (quakeMapInstance.value === undefined) {
     hnapi.error("Map has not yet been initialized!");
     return;
+  }
+  if (psWaveUpdateTimer.value !== null) {
+    clearInterval(psWaveUpdateTimer.value);
+    psWaveUpdateTimer.value = null;
   }
   showEEW.value = false;
   result.info.forEach((content: IQuakeInfo) => {

@@ -30,6 +30,7 @@ export interface IEEW {
   report_num: string;
   report_time: string;
   report_timestamp: number;
+  occur_timestamp: number;
   status: number;
   type: string;
 }
