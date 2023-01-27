@@ -1,27 +1,26 @@
 import { defineStore } from "pinia";
-import type { IGeoJsonData } from "@/interfaces/parsing/GeoJson";
 import type { GeoJSON } from "geojson";
 
 interface State {
-  geojson: IGeoJsonData;
+  countries?: GeoJSON;
+  japan?: GeoJSON;
+  japanWithSubAreas?: GeoJSON;
 }
 
 export const useGeoJsonStore = defineStore("geojson", {
-  state: (): State => ({
-    geojson: {},
-  }),
+  state: (): State => ({}),
   actions: {
     setCountriesGeoJson(geojson: GeoJSON) {
-      this.geojson.countries = geojson;
-      Object.freeze(this.geojson.countries);
+      this.countries = geojson;
+      Object.freeze(this.countries);
     },
     setJapanGeoJson(geojson: GeoJSON) {
-      this.geojson.japan = geojson;
-      Object.freeze(this.geojson.japan);
+      this.japan = geojson;
+      Object.freeze(this.japan);
     },
     setJapanSubAreasGeoJson(geojson: GeoJSON) {
-      this.geojson.japanWithSubAreas = geojson;
-      Object.freeze(this.geojson.japanWithSubAreas);
+      this.japanWithSubAreas = geojson;
+      Object.freeze(this.japanWithSubAreas);
     },
   },
 });

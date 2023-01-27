@@ -1,11 +1,4 @@
 import * as geojson from "geojson";
-import { GeoJSON } from "geojson";
-
-export interface IGeoJsonData {
-  countries?: GeoJSON;
-  japan?: GeoJSON;
-  japanWithSubAreas?: GeoJSON;
-}
 
 export interface IFetchGeoJsonConfig {
   countries?: boolean;

@@ -38,7 +38,7 @@ class HNAPI {
 
   async fetchGeoJson(fetchGeoJsonConfig: IFetchGeoJsonConfig): Promise<void> {
     const store = useGeoJsonStore();
-    if (fetchGeoJsonConfig.japan && store.geojson.japan === undefined) {
+    if (fetchGeoJsonConfig.japan && store.japan === undefined) {
       await this.makeApiRequest("/static/geojson/japan.json")
         .then((res) => {
           store.setJapanGeoJson(res);
@@ -47,7 +47,7 @@ class HNAPI {
           throw new Error("Failed to load japan geojson: " + error);
         });
     }
-    if (fetchGeoJsonConfig.countries && store.geojson.countries === undefined) {
+    if (fetchGeoJsonConfig.countries && store.countries === undefined) {
       await this.makeApiRequest("/static/geojson/countries_without_japan.json")
         .then((res) => {
           store.setCountriesGeoJson(res);
@@ -58,7 +58,7 @@ class HNAPI {
     }
     if (
       fetchGeoJsonConfig.japanWithSubAreas &&
-      store.geojson.japanWithSubAreas === undefined
+      store.japanWithSubAreas === undefined
     ) {
       await this.makeApiRequest("/static/geojson/japan_with_sub_areas.json")
         .then((res) => {
@@ -80,8 +80,8 @@ class HNAPI {
           tracePropagationTargets: [this.apiUrl[1]],
         }),
       ],
-      tracesSampleRate: this.mode === "production" ? 1.0 : 1.0,
-      sampleRate: this.mode === "production" ? 1.0 : 1.0,
+      tracesSampleRate: this.mode === "production" ? 1.0 : 0,
+      sampleRate: this.mode === "production" ? 1.0 : 0,
       environment: this.mode,
       release: `quakemap-front@${this.version}`,
       logErrors: true,

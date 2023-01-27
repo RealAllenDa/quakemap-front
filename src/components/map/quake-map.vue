@@ -76,14 +76,14 @@ function initializeMap(): void {
   );
   // Background
   L.vectorGrid
-    .slicer(toRaw(geoJsonStore.geojson.countries!), {
+    .slicer(toRaw(geoJsonStore.countries!), {
       vectorTileLayerStyles: {
         sliced: mapConfigStore.countriesBgStyle,
       },
     })
     .addTo(map.value!);
   L.vectorGrid
-    .slicer(toRaw(geoJsonStore.geojson.japan!), {
+    .slicer(toRaw(geoJsonStore.japan!), {
       vectorTileLayerStyles: {
         sliced: mapConfigStore.japanBgStyle,
       },
@@ -92,14 +92,14 @@ function initializeMap(): void {
 
   // Borders
   subAreaBorderLayer.value = L.vectorGrid
-    .slicer(toRaw(geoJsonStore.geojson.japanWithSubAreas!), {
+    .slicer(toRaw(geoJsonStore.japanWithSubAreas!), {
       vectorTileLayerStyles: {
         sliced: mapConfigStore.japanAreaBorderStyle,
       },
     })
     .addTo(map.value!);
   prefBorderLayer.value = L.vectorGrid
-    .slicer(toRaw(geoJsonStore.geojson.japan!), {
+    .slicer(toRaw(geoJsonStore.japan!), {
       vectorTileLayerStyles: {
         sliced: mapConfigStore.japanBorderStyle,
       },
@@ -183,14 +183,11 @@ function addEpicenter(content: IHypocenter): void {
 
 function addMapColoring(intensity: AllAreaIntensities): void {
   areaIntensityToColor(intensity);
-  colorMapLayer.value = L.geoJson(
-    toRaw(geoJsonStore.geojson.japanWithSubAreas),
-    {
-      style: parseColorStyle,
-      filter: filterMapColoring,
-      pane: "tilePane",
-    }
-  );
+  colorMapLayer.value = L.geoJson(toRaw(geoJsonStore.japanWithSubAreas), {
+    style: parseColorStyle,
+    filter: filterMapColoring,
+    pane: "tilePane",
+  });
   colorMapLayer.value!.addTo(map.value!);
   colorMapAdded.value = true;
 }
