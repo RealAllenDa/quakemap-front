@@ -49,15 +49,6 @@ const quakeMapInstance = ref<InstanceType<typeof QuakeMap>>();
 const eqStore = useEqInfoStore();
 const eewStore = useEEWInfoStore();
 
-onUnmounted(() => {
-  if (updateTimer.value !== null) {
-    clearInterval(updateTimer.value);
-  }
-  if (psWaveUpdateTimer.value !== null) {
-    clearInterval(psWaveUpdateTimer.value);
-  }
-});
-
 function psWaveTimeRefresh(result: IInfo) {
   let depth, timePassed;
   if (result.eew.hypocenter.depth === "Unknown") {
@@ -396,6 +387,14 @@ onMounted(async () => {
         updateTimer.value = setInterval(updateInfo, updateInterval.value);
       });
     });
+});
+onUnmounted(() => {
+  if (updateTimer.value !== null) {
+    clearInterval(updateTimer.value);
+  }
+  if (psWaveUpdateTimer.value !== null) {
+    clearInterval(psWaveUpdateTimer.value);
+  }
 });
 </script>
 
