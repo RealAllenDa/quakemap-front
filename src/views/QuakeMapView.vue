@@ -70,7 +70,7 @@ function displayEEWInformation(content: IEEW) {
 }
 
 function parseEEWInformation(result: IInfo, mapUpdateOnly = false) {
-  if (quakeMapInstance.value === undefined) {
+  if (quakeMapInstance.value! === undefined) {
     hnapi.error("Map has not yet been initialized!");
     return;
   }
@@ -81,7 +81,7 @@ function parseEEWInformation(result: IInfo, mapUpdateOnly = false) {
       eewIsDrill: false,
       eewIsExpected: false,
     });
-    quakeMapInstance.value.deleteAllLayers();
+    quakeMapInstance.value!.deleteAllLayers();
     parseEarthquakeInformation(result);
     return;
   }
@@ -110,32 +110,32 @@ function parseEEWInformation(result: IInfo, mapUpdateOnly = false) {
     }
     eewStore.eewIsDrill = result.eew.is_test;
   }
-  quakeMapInstance.value.deleteAllLayers();
+  quakeMapInstance.value!.deleteAllLayers();
   nextTick(() => {
-    quakeMapInstance.value.addEpicenter(result.eew.hypocenter);
+    quakeMapInstance.value!.addEpicenter(result.eew.hypocenter);
     if (result.eew.area_coloring.recommended_areas) {
       if (!isEqual({}, result.eew.area_coloring.areas)) {
-        quakeMapInstance.value.addMapIntensities(
+        quakeMapInstance.value!.addMapIntensities(
           result.eew.area_coloring.areas
         );
-        quakeMapInstance.value.addMapColoring(result.eew.area_coloring.areas);
+        quakeMapInstance.value!.addMapColoring(result.eew.area_coloring.areas);
       } else {
         hnapi.warn("Areas equals null. Check server status.");
       }
     } else {
       if (!isEqual(result.eew.area_intensity, {})) {
-        quakeMapInstance.value.addMapIntensities(result.eew.area_intensity);
+        quakeMapInstance.value!.addMapIntensities(result.eew.area_intensity);
       } else {
         hnapi.warn("No points exist. Check server status.");
       }
     }
-    quakeMapInstance.value.parseMapScale(true);
+    quakeMapInstance.value!.parseMapScale(true);
   });
 
   eewStore.eewIsExpected = true;
 
   if (result.eew.s_wave !== null) {
-    quakeMapInstance.value.addWaveCircle(
+    quakeMapInstance.value!.addWaveCircle(
       result.eew.hypocenter,
       result.eew.s_wave,
       "s"
@@ -144,7 +144,7 @@ function parseEEWInformation(result: IInfo, mapUpdateOnly = false) {
     hnapi.warn("S wave time equals null. Check server status.");
   }
   if (result.eew.p_wave !== null) {
-    quakeMapInstance.value.addWaveCircle(
+    quakeMapInstance.value!.addWaveCircle(
       result.eew.hypocenter,
       result.eew.p_wave,
       "p"
@@ -155,7 +155,7 @@ function parseEEWInformation(result: IInfo, mapUpdateOnly = false) {
 }
 
 function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
-  if (quakeMapInstance.value === undefined) {
+  if (quakeMapInstance.value! === undefined) {
     hnapi.error("Map has not yet been initialized!");
     return;
   }
@@ -178,53 +178,53 @@ function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
         maximumIntensity: content.max_intensity,
         occurTime: content.occur_time,
       });
-      quakeMapInstance.value.deleteAllLayers();
+      quakeMapInstance.value!.deleteAllLayers();
       nextTick(() => {
-        quakeMapInstance.value.addMapIntensities(content.area_intensity.areas);
-        quakeMapInstance.value.addMapColoring(content.area_intensity.areas);
+        quakeMapInstance.value!.addMapIntensities(content.area_intensity.areas);
+        quakeMapInstance.value!.addMapColoring(content.area_intensity.areas);
         setBannerContent({
           domestic: content.tsunami_comments.domestic,
           foreign: content.tsunami_comments.foreign,
         });
-        quakeMapInstance.value.parseMapScale();
+        quakeMapInstance.value!.parseMapScale();
       });
     } else if (content.type === "Destination") {
       parseEarthquakeInformation(currentEarthquakeInformation.value);
       displayEarthquakeInformation(content);
-      quakeMapInstance.value.addEpicenter(content.hypocenter);
-      quakeMapInstance.value.parseMapScale();
+      quakeMapInstance.value!.addEpicenter(content.hypocenter);
+      quakeMapInstance.value!.parseMapScale();
     } else if (content.type === "ScaleAndDestination") {
       eqStore.maximumIntensity = content.max_intensity;
       displayEarthquakeInformation(content);
-      quakeMapInstance.value.deleteAllLayers();
+      quakeMapInstance.value!.deleteAllLayers();
       nextTick(() => {
         setBannerContent({
           domestic: content.tsunami_comments.domestic,
           foreign: content.tsunami_comments.foreign,
         });
-        quakeMapInstance.value.addEpicenter(content.hypocenter);
-        quakeMapInstance.value.addMapIntensities(content.area_intensity.areas);
-        quakeMapInstance.value.addMapColoring(content.area_intensity.areas);
-        quakeMapInstance.value.parseMapScale();
+        quakeMapInstance.value!.addEpicenter(content.hypocenter);
+        quakeMapInstance.value!.addMapIntensities(content.area_intensity.areas);
+        quakeMapInstance.value!.addMapColoring(content.area_intensity.areas);
+        quakeMapInstance.value!.parseMapScale();
       });
     } else if (content.type === "DetailScale") {
       displayEarthquakeInformation(content);
       eqStore.maximumIntensity = content.max_intensity;
-      quakeMapInstance.value.deleteAllLayers();
+      quakeMapInstance.value!.deleteAllLayers();
       nextTick(() => {
-        quakeMapInstance.value.addMapIntensities(
+        quakeMapInstance.value!.addMapIntensities(
           content.area_intensity.station
         );
-        quakeMapInstance.value.addEpicenter(content.hypocenter);
-        quakeMapInstance.value.parseMapScale();
+        quakeMapInstance.value!.addEpicenter(content.hypocenter);
+        quakeMapInstance.value!.parseMapScale();
       });
     } else if (content.type === "Foreign") {
       displayEarthquakeInformation(content);
       eqStore.maximumIntensity = content.max_intensity;
-      quakeMapInstance.value.deleteAllLayers();
+      quakeMapInstance.value!.deleteAllLayers();
       nextTick(() => {
-        quakeMapInstance.value.addEpicenter(content.hypocenter);
-        quakeMapInstance.value.setForeignEarthquake(content.hypocenter);
+        quakeMapInstance.value!.addEpicenter(content.hypocenter);
+        quakeMapInstance.value!.setForeignEarthquake(content.hypocenter);
       });
     }
   });

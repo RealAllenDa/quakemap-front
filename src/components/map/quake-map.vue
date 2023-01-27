@@ -3,14 +3,8 @@
 </template>
 
 <script lang="ts" setup>
-import L, {
-  FeatureGroup,
-  GeoJSON,
-  Icon,
-  Layer,
-  Map,
-  PathOptions,
-} from "leaflet";
+import type { PathOptions } from "leaflet";
+import L, { FeatureGroup, GeoJSON, Icon, Layer, Map } from "leaflet";
 import "leaflet.vectorgrid";
 import type { IHypocenter } from "@/interfaces/parsing/QuakeInfo";
 import type {
