@@ -4,12 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "vite --host",
-    "build": "run-p type-check build-only delete-maps",
+    "build": "run-p type-check build-only",
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
-    "delete-maps": "node ./delete-sourcemap.js"
+    "delete-maps": "ls -l && ls -l /app && node ./delete-sourcemap.js"
   },
   "dependencies": {
     "@sentry/tracing": "^7.31.1",

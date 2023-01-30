@@ -21,4 +21,4 @@ function deleteMaps(dir) {
   });
 }
 
-["./dist/assets/"].map(deleteMaps);
+["/app/dist/assets/"].map(deleteMaps);

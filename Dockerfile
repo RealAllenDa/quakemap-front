@@ -8,6 +8,7 @@ RUN npm install
 COPY . .
 ENV SENTRY_AUTH_TOKEN=$sentry_token
 RUN npm run build
+RUN npm run delete-maps
 
 # production
 FROM nginx:stable-alpine as production-stage
