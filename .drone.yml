@@ -42,7 +42,7 @@ steps:
     commands:
       - docker stop quakemap_front || true && docker rm quakemap_front || true
       - docker login --username $${docker_user} --password $${docker_pass} registry.mightyhub.net
-      - docker run -d --pull=always --name quakemap_front -p 8787:80 registry.mightyhub.net/hnapi/quakemap_front:latest
+      - docker run -d --pull=always --name quakemap_front -p 8787:80 registry.mightyhub.net/hnfront/quakemap_front:latest
 
 depends_on:
   - build
