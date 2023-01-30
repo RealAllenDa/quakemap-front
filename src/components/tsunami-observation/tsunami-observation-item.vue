@@ -3,12 +3,13 @@
   <div>{{ props.condition !== "Observing" ? props.time : "" }}</div>
   <div :class="heightClass" v-html="height"></div>
   <div v-if="heightCondition === 'Rising'" class="rising-alert">
-    <img alt="RISING" class="rising-icon" src="public/rising.svg" />
+    <img :src="risingSvg" alt="RISING" class="rising-icon" />
   </div>
 </template>
 
 <script lang="ts" setup>
 import { computed } from "vue";
+import risingSvg from "@/assets/rising.svg";
 
 const props = defineProps<{
   name: string;

@@ -17,6 +17,7 @@ import { useGeoJsonStore } from "@/stores/geojson";
 import { useMapStore } from "@/stores/map";
 import { onMounted, ref, toRaw } from "vue";
 import { useIntensityStore } from "@/stores/intensity";
+import epicenterSvg from "@/assets/epicenter.svg";
 
 const mapCenter = ref<[number, number]>([38.272688535980976, 137]);
 const mapZoom = ref(5);
@@ -56,7 +57,7 @@ iconGroup.value.on("layerremove", () => {
 const areaColoring = ref<IAreaColor>();
 
 const epicenterIcon = new Icon({
-  iconUrl: "/epicenter.svg",
+  iconUrl: epicenterSvg,
   iconSize: [40, 40],
 });
 
