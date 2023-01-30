@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="fetchType === 'forecast'"
+    v-if="props.fetchType === 'forecast'"
     id="tsunami-description"
     class="tsunami-item forecast"
   >
@@ -9,7 +9,7 @@
     <div id="height-indicator">Height</div>
   </div>
   <div
-    v-else-if="fetchType === 'information'"
+    v-else-if="props.fetchType === 'information'"
     id="tsunami-description"
     class="tsunami-item information"
   >
