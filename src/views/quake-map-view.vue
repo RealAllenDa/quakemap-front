@@ -155,6 +155,9 @@ function parseEEWInformation(result: IInfo, mapUpdateOnly = false) {
       eewIsExpected: false,
     });
     quakeMapInstance.value!.deleteAllLayers();
+    eqStore.$patch({
+      tsunamiCommentsDomestic: "EEWCancelled",
+    });
     parseEarthquakeInformation(result);
     return;
   }
@@ -306,7 +309,7 @@ function updateInfo() {
   hnapi
     .makeApiRequest("/api/earthquake_info", updateInterval.value)
     .then((result: IInfo) => {
-      hnapi.debug(result);
+      // hnapi.debug(result);
 
       if (!result.eew || !result.info) {
         hnapi.error("Message format incorrect. Skipping.");
@@ -383,9 +386,8 @@ onMounted(async () => {
       japanWithSubAreas: true,
     })
     .then(() => {
-      nextTick(() => {
-        updateTimer.value = setInterval(updateInfo, updateInterval.value);
-      });
+      updateInfo();
+      updateTimer.value = setInterval(updateInfo, updateInterval.value);
     });
 });
 onUnmounted(() => {

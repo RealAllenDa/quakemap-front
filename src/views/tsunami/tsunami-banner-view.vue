@@ -1,0 +1,68 @@
+<template>
+  <div id="main-container">
+    <Vue3Marquee :duration="180">
+      <div id="tsunami-banner">
+        A tsunami is about to hit. Please evacuate immediately. [Explanation of
+        expected tsunami grade] &lt;Major Tsunami Warning&gt; A large tsunami
+        will hit the area and cause extensive damage. If you are in a coastal
+        area or along a river, please evacuate to a safe place such as high
+        ground or an evacuation building immediately. The tsunami will strike
+        repeatedly. Do not leave the safety of your home until the warning is
+        lifted. &lt;Tsunami Warning&gt; There will be a tsunami. If you are in
+        coastal areas or along rivers, please evacuate immediately to higher
+        ground, evacuation buildings or other safe places. &lt;Tsunami
+        Advisory&gt; It is dangerous to be in or near the sea. If you are in the
+        sea, get out of the water and away from the shore immediately. Tidal
+        currents will continue to be fast, so please do not enter the sea or
+        approach the coast until the warning is lifted. People in coastal areas
+        and along rivers where the warning has been issued should immediately
+        evacuate to higher ground, evacuation buildings or other safe places.
+        The estimated time of arrival is the earliest time a tsunami will arrive
+        in the forecast area. Depending on the location, the tsunami may arrive
+        much later than this time. It may take several hours or more from the
+        estimated time of arrival to the highest point of the tsunami, so
+        regardless of the observed height of the tsunami, please stay in a safe
+        place until the warning is lifted. Depending on your location, the
+        height of the tsunami may be higher than the &quot;expected tsunami
+        height&quot;. [Explanation of expected tsunami heights] The higher the
+        expected tsunami, the more devastating it will be. &lt;10m+&gt; A major
+        tsunami strikes and causes devastating damage. Wooden houses will be
+        destroyed or swept away and people will be swept away by the tsunami.
+        &lt;10m&gt; A huge tsunami strikes and causes extensive damage. Wooden
+        houses will be destroyed or swept away and people will be caught in the
+        tsunami current. &lt;5m&gt; A tsunami strikes and causes extensive
+        damage. Wooden houses are destroyed or swept away and people are caught
+        in the current. &lt;3m&gt; Tsunami strikes at lower elevations and
+        causes damage. Wooden houses will be inundated and people will be caught
+        in the tsunami current. &lt;1m&gt; In the sea, people are caught in the
+        fast currents. Aquaculture rafts are washed away and small boats are
+        capsized.
+      </div>
+    </Vue3Marquee>
+  </div>
+</template>
+
+<script lang="ts" setup>
+import "vue3-marquee/dist/style.css";
+import { Vue3Marquee } from "vue3-marquee";
+</script>
+
+<style>
+#main-container {
+  width: 1600px;
+  height: 100px;
+  background: #cccc33;
+  color: black;
+  font-size: 70px;
+  line-height: 115px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+#tsunami-banner {
+  width: 100%;
+  height: 100%;
+  white-space: nowrap;
+  display: inline;
+}
+</style>

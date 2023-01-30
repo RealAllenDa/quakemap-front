@@ -8,15 +8,60 @@ const router = createRouter({
   routes: [
     {
       path: "/map",
-      name: "map",
-      component: () => import("@/views/QuakeMapView.vue"),
-      meta: { title: "QuakeMap" },
+      component: () => import("@/views/quake-map-view.vue"),
+      meta: { title: "QuakeMap - Map" },
     },
     {
       path: "/shake_level",
-      name: "shakeLevel",
-      component: () => import("@/views/ShakeLevelView.vue"),
-      meta: { title: "Shake Level" },
+      component: () => import("@/views/shake-level-view.vue"),
+      meta: { title: "QuakeMap - Shake Level" },
+    },
+    {
+      path: "/shake_indicator",
+      component: () => import("@/views/shake-indicator-view.vue"),
+      meta: { title: "QuakeMap - Shake Indicator" },
+    },
+    {
+      path: "/tsunami_banner",
+      component: () => import("@/views/tsunami/tsunami-banner-view.vue"),
+      meta: { title: "QuakeMap - Tsunami Banner" },
+    },
+    {
+      path: "/tsunami_info",
+      component: () => import("@/views/tsunami/tsunami-expectation-view.vue"),
+      meta: { title: "QuakeMap - Tsunami Info" },
+    },
+    {
+      path: "/tsunami_forecast",
+      redirect: () => {
+        return {
+          path: "/tsunami_info",
+          query: {
+            type: "forecast",
+          },
+        };
+      },
+    },
+    {
+      path: "/tsunami_map",
+      component: () => import("@/views/tsunami/tsunami-map-view.vue"),
+      meta: { title: "QuakeMap - Tsunami Map" },
+    },
+    {
+      path: "/tsunami_forecast_map",
+      redirect: () => {
+        return {
+          path: "/tsunami_map",
+          query: {
+            type: "forecast",
+          },
+        };
+      },
+    },
+    {
+      path: "/tsunami_watch",
+      component: () => import("@/views/tsunami/tsunami-observation.vue"),
+      meta: { title: "QuakeMap - Tsunami Observation" },
     },
   ],
 });

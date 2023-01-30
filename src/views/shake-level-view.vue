@@ -36,6 +36,7 @@ const redPoints = ref("0");
 
 onMounted(async () => {
   await hnapi.initialize({}).then(() => {
+    updateInfo();
     updateTimer.value = setInterval(updateInfo, updateInterval);
   });
 });
@@ -49,6 +50,10 @@ function updateInfo() {
   hnapi
     .makeApiRequest("/api/shake_level", updateInterval)
     .then((result: IShakeLevel) => {
+      if (result.status === -1) {
+        hnapi.error("Shake level not available.");
+        return;
+      }
       shakeLevel.value = result.shake_level.toString();
       greenPoints.value = result.green.toString();
       yellowPoints.value = result.yellow.toString();

@@ -1,4 +1,3 @@
-import axios from "axios";
 import type { IFetchGeoJsonConfig } from "@/interfaces/parsing/GeoJson";
 import { useGeoJsonStore } from "@/stores/geojson";
 import type { App } from "vue";
@@ -68,6 +67,33 @@ class HNAPI {
           throw new Error("Failed to load japanSubAreas geojson: " + error);
         });
     }
+    if (fetchGeoJsonConfig.japanAreaLine && store.japanAreaLine === undefined) {
+      await this.makeApiRequest("/static/geojson/japan_area_line.json")
+        .then((res) => {
+          store.setJapanAreaLineGeoJson(res);
+        })
+        .catch((error) => {
+          throw new Error("Failed to load japanAreaLine geojson: " + error);
+        });
+    }
+    if (fetchGeoJsonConfig.tsunamiAreas && store.tsunamiAreas === undefined) {
+      await this.makeApiRequest("/static/geojson/tsunami_areas.json")
+        .then((res) => {
+          store.setTsunamiAreasGeoJson(res);
+        })
+        .catch((error) => {
+          throw new Error("Failed to load tsunamiAreas geojson: " + error);
+        });
+    }
+    if (fetchGeoJsonConfig.tsunamiJapan && store.tsunamiJapan === undefined) {
+      await this.makeApiRequest("/static/geojson/tsunami_japan.json")
+        .then((res) => {
+          store.setTsunamiJapanGeoJson(res);
+        })
+        .catch((error) => {
+          throw new Error("Failed to load tsunamiJapan geojson: " + error);
+        });
+    }
   }
 
   initializeSentry(app: App, router: Router) {
@@ -107,24 +133,33 @@ class HNAPI {
   }
 
   // eslint-disable-next-line require-await
-  async makeApiRequest(url: string, timeout = 0): Promise<never> {
+  async makeApiRequest(url: string, timeout = 3000): Promise<never> {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
     return new Promise((resolve, reject) => {
-      axios
-        .get(`${this.apiUrl.join("")}${url}`, {
-          timeout,
-        })
+      fetch(`${this.apiUrl.join("")}${url}`, {
+        signal: controller.signal,
+      })
         .then((response: any) => {
-          resolve(response.data);
+          resolve(response.json());
+          clearTimeout(id);
         })
         .catch((error: Error) => {
           reject(new _ReqFailedErr(error));
+          clearTimeout(id);
         });
     });
   }
 
   debug(...text: any[]) {
-    // eslint-disable-next-line no-console
-    console.log("%c[DEBUG]", "color: lightgreen; font-weight: bold;", ...text);
+    if (this.mode !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(
+        "%c[DEBUG]",
+        "color: lightgreen; font-weight: bold;",
+        ...text
+      );
+    }
   }
 
   info(...text: any[]) {

@@ -5,6 +5,9 @@ interface State {
   countries?: GeoJSON;
   japan?: GeoJSON;
   japanWithSubAreas?: GeoJSON;
+  japanAreaLine?: GeoJSON;
+  tsunamiAreas?: GeoJSON;
+  tsunamiJapan?: GeoJSON;
 }
 
 export const useGeoJsonStore = defineStore("geojson", {
@@ -21,6 +24,18 @@ export const useGeoJsonStore = defineStore("geojson", {
     setJapanSubAreasGeoJson(geojson: GeoJSON) {
       this.japanWithSubAreas = geojson;
       Object.freeze(this.japanWithSubAreas);
+    },
+    setJapanAreaLineGeoJson(geojson: GeoJSON) {
+      this.japanAreaLine = geojson;
+      Object.freeze(this.japanAreaLine);
+    },
+    setTsunamiAreasGeoJson(geojson: GeoJSON) {
+      this.tsunamiAreas = geojson;
+      Object.freeze(this.tsunamiAreas);
+    },
+    setTsunamiJapanGeoJson(geojson: GeoJSON) {
+      this.tsunamiJapan = geojson;
+      Object.freeze(this.tsunamiJapan);
     },
   },
 });

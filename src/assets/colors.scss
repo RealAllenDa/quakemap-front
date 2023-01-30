@@ -27,6 +27,10 @@ $intensity-5-and-up: rgb(255, 255, 0);
 $major-tsunami-warn: #B65BD2;
 $tsunami-warn: #FF2800;
 $tsunami-advisory: #FAF500;
+$map-major-tsunami-warn: #B65BD2;
+$map-tsunami-warn: #DE3329;
+$map-tsunami-advisory: #E5A72C;
+$map-tsunami-forecast: #00AAFF;
 
 @mixin bold {
   font-weight: bold;

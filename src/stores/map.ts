@@ -8,6 +8,11 @@ interface State {
   japanBorderStyle: object;
   sWaveCircleStyle: object;
   pWaveCircleStyle: object;
+  tsunamiMapJapanStyle: object;
+  tsunamiMapOkinawaStyle: object;
+  tsunamiMapOgasawaraStyle: object;
+  tsunamiJapanGeoJsonStyle: object;
+  japanAreaLineGeoJsonStyle: object;
 }
 
 export const useMapStore = defineStore("map", {
@@ -65,6 +70,60 @@ export const useMapStore = defineStore("map", {
       opacity: 1,
       fill: false,
       pane: "popupPane",
+    },
+
+    tsunamiMapJapanStyle: {
+      zoomControl: false,
+      center: {
+        lat: 38.426610210705135,
+        lng: 138.42138499239283,
+      },
+      attributionControl: false,
+      maxZoom: 8,
+      minZoom: 2,
+      zoomSnap: 0.01,
+      zoomDelta: 0.01,
+      zoom: 5.1,
+    },
+
+    tsunamiMapOkinawaStyle: {
+      zoomControl: false,
+      center: {
+        lat: 26.674949874061767,
+        lng: 127.24804714322093,
+      },
+      zoom: 5,
+      attributionControl: false,
+      maxZoom: 8,
+      minZoom: 2,
+      zoomSnap: 0.01,
+      zoomDelta: 0.5,
+    },
+
+    tsunamiMapOgasawaraStyle: {
+      zoomControl: false,
+      center: [26.91439669619432, 142.14703272013634],
+      zoom: 7.57,
+      attributionControl: false,
+      maxZoom: 8,
+      minZoom: 2,
+      zoomSnap: 0.01,
+      zoomDelta: 0.5,
+    },
+
+    tsunamiJapanGeoJsonStyle: {
+      weight: 0,
+      stroke: false,
+      fillColor: "#5e5e5e",
+      fillOpacity: 1,
+      fill: true,
+    },
+
+    japanAreaLineGeoJsonStyle: {
+      stroke: true,
+      fill: false,
+      color: "#000000",
+      weight: 0.5,
     },
   }),
 });
