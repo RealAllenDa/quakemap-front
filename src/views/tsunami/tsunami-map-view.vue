@@ -30,7 +30,8 @@ import type { IMapLegend, ITsunamiInfo } from "@/interfaces/api/TsunamiInfo";
 import TsunamiMap from "@/components/tsunami-map/tsunami-map.vue";
 import TsunamiMapLegends from "@/components/tsunami-map/tsunami-map-legends.vue";
 import { isEqual } from "lodash";
-import L, { GeoJSON, LatLngBounds, Layer, PathOptions } from "leaflet";
+import type { PathOptions } from "leaflet";
+import L, { GeoJSON, LatLngBounds, Layer } from "leaflet";
 import type { ITsunamiGeoJsonFeatures } from "@/interfaces/parsing/GeoJson";
 import { useRoute } from "vue-router";
 import { useGeoJsonStore } from "@/stores/geojson";
@@ -125,13 +126,13 @@ function setMapFlash() {
 
 function deleteAllStrokes() {
   if (layerMain.value !== undefined) {
-    mapMain.value.map.removeLayer(layerMain.value);
+    mapMain.value!.map!.removeLayer(layerMain.value);
   }
   if (layerOkinawa.value !== undefined) {
-    mapOkinawa.value.map.removeLayer(layerOkinawa.value);
+    mapOkinawa.value!.map!.removeLayer(layerOkinawa.value);
   }
   if (layerOgasawara.value !== undefined) {
-    mapOgasawara.value.map.removeLayer(layerOgasawara.value);
+    mapOgasawara.value!.map!.removeLayer(layerOgasawara.value);
   }
 }
 
@@ -214,8 +215,8 @@ function onEachFeature(feature: ITsunamiGeoJsonFeatures, layer: Layer) {
     }
   }
   if (
-    mapOkinawa.value.map
-      .getBounds()
+    mapOkinawa
+      .value!.map!.getBounds()
       // @ts-ignore
       .contains([layer._bounds._northEast, layer._bounds._southWest])
   ) {
@@ -267,8 +268,8 @@ function forecastOnEachFeature(feature: ITsunamiGeoJsonFeatures, layer: Layer) {
     }
   }
   if (
-    mapOkinawa.value.map
-      .getBounds()
+    mapOkinawa
+      .value!.map!.getBounds()
       // @ts-ignore
       .contains([layer._bounds._northEast, layer._bounds._southWest])
   ) {
@@ -344,7 +345,7 @@ function setMapInfo(result: ITsunamiInfo) {
       style: mapStyleParser,
     });
     enableOkinawa.value = true;
-    layerOkinawa.value!.addTo(mapOkinawa.value.map);
+    layerOkinawa.value!.addTo(mapOkinawa.value!.map!);
   } else {
     enableOkinawa.value = false;
   }
@@ -354,21 +355,21 @@ function setMapInfo(result: ITsunamiInfo) {
       style: mapStyleParser,
     });
     enableOgasawara.value = true;
-    layerOgasawara.value!.addTo(mapOgasawara.value.map);
+    layerOgasawara.value!.addTo(mapOgasawara.value!.map!);
   } else {
     enableOgasawara.value = false;
   }
 
-  layerMain.value!.addTo(mapMain.value.map);
+  layerMain.value!.addTo(mapMain.value!.map!);
 
   if (
     boundJapan.value !== undefined &&
     !enableOgasawara.value &&
     !enableOkinawa.value
   ) {
-    mapMain.value.map.fitBounds(boundJapan.value!, { padding: [0, 20] });
+    mapMain.value!.map!.fitBounds(boundJapan.value!, { padding: [0, 20] });
   } else {
-    mapMain.value.map.fitBounds(japanMapLatLngBounds);
+    mapMain.value!.map!.fitBounds(japanMapLatLngBounds);
   }
 
   setMapFlash();
