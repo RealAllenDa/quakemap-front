@@ -20,7 +20,7 @@ class HNAPI {
   private readonly logo = atob(
     "JWMgICBfX18gICAgICAgICAgICAgIF8gICAgICAgIF9fICBfXyAgICAgICAgICAgICAKICAvIF8gXCBfICAgXyAgX18gX3wgfCBfX19fX3wgIFwvICB8IF9fIF8gXyBfXyAgCiB8IHwgfCB8IHwgfCB8LyBfYCB8IHwvIC8gXyBcIHxcL3wgfC8gX2AgfCAnXyBcIAogfCB8X3wgfCB8X3wgfCAoX3wgfCAgIDwgIF9fLyB8ICB8IHwgKF98IHwgfF8pIHwKICBcX19cX1xcX18sX3xcX18sX3xffFxfXF9fX3xffCAgfF98XF9fLF98IC5fXy8gCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgfF98ICAgIA=="
   );
-  private readonly version = import.meta.env.VITE_RELEASE;
+  private readonly version = VITE_RELEASE;
 
   constructor(useProductionAPI = false) {
     this.useProductionAPI = useProductionAPI;

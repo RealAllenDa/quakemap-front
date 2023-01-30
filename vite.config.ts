@@ -19,9 +19,12 @@ export default defineConfig(({ mode }) => {
         include: "./dist",
         url: "https://sentry.mightyhub.net/",
         authToken: env.SENTRY_AUTH_TOKEN,
-        release: `quakemap-front@${env.VITE_RELEASE}`,
+        release: `quakemap-front@${process.env.npm_package_version}`,
       }),
     ],
+    define: {
+      VITE_RELEASE: JSON.stringify(process.env.npm_package_version),
+    },
     resolve: {
       alias: {
         "@": fileURLToPath(new URL("./src", import.meta.url)),
