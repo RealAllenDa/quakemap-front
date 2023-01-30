@@ -133,7 +133,7 @@ class HNAPI {
   }
 
   // eslint-disable-next-line require-await
-  async makeApiRequest(url: string, timeout = 3000): Promise<never> {
+  async makeApiRequest(url: string, timeout = 10000): Promise<never> {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
     return new Promise((resolve, reject) => {
