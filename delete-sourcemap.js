@@ -5,20 +5,16 @@ function deleteMaps(dir) {
     files.forEach((file) => {
       if (/\.map$/.test(file)) {
         fs.unlinkSync(dir + file);
-      } else {
+      } else if (/\.css$/.test(file) || /\.js$/.test(file)) {
         fs.readFile(dir + file, "utf8", (err, data) => {
-          let result = data.split("\n");
-          console.log(result.length);
-          if (result[result.length - 1] !== undefined && result.length > 1) {
-            fs.writeFileSync(
-              dir + file,
-              result.slice(0, result.length - 1).join("\n")
-            );
-          }
+          fs.writeFileSync(
+            dir + file,
+            data.replace(/\/\/# sourceMappingURL.*/, "")
+          );
         });
       }
     });
   });
 }
 
-["/app/dist/assets/"].map(deleteMaps);
+["./dist/assets/"].map(deleteMaps);

@@ -9,7 +9,7 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
-    "delete-maps": "ls -l && ls -l /app && node ./delete-sourcemap.js"
+    "delete-maps": "ode ./delete-sourcemap.js"
   },
   "dependencies": {
     "@sentry/tracing": "^7.31.1",
