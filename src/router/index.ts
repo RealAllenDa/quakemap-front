@@ -60,8 +60,13 @@ const router = createRouter({
     },
     {
       path: "/tsunami_watch",
-      component: () => import("@/views/tsunami/tsunami-observation.vue"),
+      component: () => import("@/views/tsunami/tsunami-observation-view.vue"),
       meta: { title: "QuakeMap - Tsunami Observation" },
+    },
+    {
+      path: "/:pathMatch(.*)*",
+      component: () => import("@/views/index-view.vue"),
+      meta: { title: "QuakeMap" },
     },
   ],
 });
