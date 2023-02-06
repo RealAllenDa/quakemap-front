@@ -2,10 +2,7 @@
   <div :class="'intensity-' + computedClass" class="intensity-icon">
     <span class="intensity-label">Maximum Int.</span>
     <div class="intensity">
-      <span
-        v-if="addThings !== '' || eqStore.maximumIntensity === '--'"
-        style="margin-left: 5px"
-      >
+      <span v-if="addThings !== ''" style="margin-left: 5px">
         {{ computedIntensity }}
       </span>
       <span v-else class="margin-add">{{ computedIntensity }}</span>
@@ -33,6 +30,8 @@ const intensityAddClass = computed(() => {
 });
 const computedIntensity = computed(() => {
   switch (eqStore.maximumIntensity) {
+    case "-1":
+      return "--";
     case "5-":
     case "5+":
       return "5";
