@@ -19,9 +19,6 @@ import { onMounted, ref, toRaw } from "vue";
 import { useIntensityStore } from "@/stores/intensity";
 import epicenterSvg from "@/assets/epicenter.svg";
 
-const mapCenter = ref<[number, number]>([38.272688535980976, 137]);
-const mapZoom = ref(5);
-
 const geoJsonStore = useGeoJsonStore();
 const mapConfigStore = useMapStore();
 const intensityStore = useIntensityStore();
@@ -67,8 +64,8 @@ onMounted(() => {
 
 function initializeMap(): void {
   map.value = L.map("map", {
-    center: mapCenter.value,
-    zoom: mapZoom.value,
+    center: [38.272688535980976, 137],
+    zoom: 5,
     ...mapConfigStore.mapOptions,
   });
   map.value?.attributionControl.setPrefix("QuakeMap by AllenDa");
@@ -194,8 +191,8 @@ function addMapColoring(intensity: AllAreaIntensities): void {
 }
 
 function setForeignEarthquake(epicenter: IHypocenter): void {
-  mapZoom.value = 2;
-  mapCenter.value = [epicenter.latitude, epicenter.latitude];
+  map.value!.panTo([epicenter.latitude, epicenter.longitude]);
+  map.value!.setZoom(2);
 }
 
 function addWaveCircle(
