@@ -41,4 +41,8 @@ const store = useEEWInfoStore();
   font-size: 20px;
   font-weight: bold;
 }
+
+.deep-earthquake {
+  background: rgb(195, 120, 7);
+}
 </style>
