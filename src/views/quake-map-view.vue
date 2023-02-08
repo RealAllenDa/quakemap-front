@@ -16,7 +16,7 @@ import type {
   ITsunamiComments,
 } from "@/interfaces/parsing/QuakeInfo";
 import type { IInfo, IInfoMocked } from "@/interfaces/api/QuakeInfo";
-import { isEqual } from "lodash";
+import { cloneDeep, isEqual } from "lodash";
 import QuakeMap from "@/components/map/quake-map.vue";
 import EewInfoContainer from "@/components/map/eew-info-container.vue";
 import type { IEEW } from "@/interfaces/parsing/EEW";
@@ -44,6 +44,13 @@ const currentEewId = ref("");
 const currentEarthquakeInformation = ref<IInfoMocked>({
   info: [],
 });
+const infoTypesList: Record<string, number> = {
+  ScalePrompt: 2,
+  Destination: 3,
+  ScaleAndDestination: 1,
+  DetailScale: 0,
+  Foreign: 0,
+};
 
 const quakeMapInstance = ref<InstanceType<typeof QuakeMap>>();
 const eqStore = useEqInfoStore();
@@ -224,6 +231,34 @@ function parseEEWInformation(result: IInfo, mapUpdateOnly = false) {
   }, 500);
 }
 
+function selectEarthquakeInformation(result: IQuakeInfo[]): IQuakeInfo[] {
+  let returnAll = false;
+  let occurTime = "";
+
+  let sortedResult = cloneDeep(result);
+  sortedResult.sort((a, b) => {
+    if (occurTime === "") {
+      occurTime = a.occur_time;
+    }
+    if (occurTime !== a.occur_time || occurTime !== b.occur_time) {
+      hnapi.warn("Multiple occur times: Multiple earthquake, returning all");
+      returnAll = true;
+      return 0;
+    }
+    const aType = infoTypesList[a.type];
+    const bType = infoTypesList[b.type];
+    return aType - bType;
+  });
+  if (returnAll) {
+    return result;
+  } else if (sortedResult[0].type === "Destination") {
+    hnapi.error("Final sorted result is Destination: undefined behavior");
+    return result;
+  } else {
+    return [sortedResult[0]];
+  }
+}
+
 function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
   if (quakeMapInstance.value === undefined) {
     hnapi.error("Map has not yet been initialized!");
@@ -234,7 +269,16 @@ function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
     psWaveUpdateTimer.value = null;
   }
   showEEW.value = false;
-  result.info.forEach((content: IQuakeInfo) => {
+
+  let finalInfo;
+  if (result.info.length > 1) {
+    hnapi.warn("RACE: multiple info available.");
+    finalInfo = selectEarthquakeInformation(result.info);
+  } else {
+    finalInfo = result.info;
+  }
+  hnapi.debug(finalInfo);
+  finalInfo.forEach((content: IQuakeInfo) => {
     eqStore.currentType = content.type;
     if (
       parseInt(content.max_intensity) === 99999 ||
