@@ -265,7 +265,6 @@ function parseMapScale(isEEW = false): void {
   } catch (e) {
     hnapi.error("Failed to parse epicenterGroup bounds:", e);
   }
-  hnapi.info("Parsed bounds =>", currentBounds);
   try {
     if (isEEW) {
       currentBounds = currentBounds.pad(-0.85);
@@ -273,7 +272,6 @@ function parseMapScale(isEEW = false): void {
   } catch (e) {
     hnapi.error("Failed to pad bounds:", e);
   }
-  hnapi.debug("Final bounds =>", currentBounds);
   map.value!.fitBounds(currentBounds, {
     padding: [0, 30],
   });
