@@ -304,7 +304,6 @@ function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
   } else {
     finalInfo = result.info;
   }
-  hnapi.debug(finalInfo);
   finalInfo.forEach((content: IQuakeInfo) => {
     eqStore.currentType = content.type;
     if (
@@ -335,9 +334,16 @@ function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
       });
     } else if (content.type === "Destination") {
       parseEarthquakeInformation(currentEarthquakeInformation.value);
-      displayEarthquakeInformation(content);
-      quakeMapInstance.value!.addEpicenter(content.hypocenter);
-      quakeMapInstance.value!.parseMapScale();
+      // Set currentType back to Destination, since the recursive
+      // parseEarthquakeInformation() had set currentType to others.
+      eqStore.currentType = content.type;
+      // nextTick() is REQUIRED here, for the update of banners takes
+      // time to complete.
+      nextTick(() => {
+        displayEarthquakeInformation(content);
+        quakeMapInstance.value!.addEpicenter(content.hypocenter);
+        quakeMapInstance.value!.parseMapScale();
+      });
     } else if (content.type === "ScaleAndDestination") {
       eqStore.maximumIntensity = content.max_intensity;
       displayEarthquakeInformation(content);
