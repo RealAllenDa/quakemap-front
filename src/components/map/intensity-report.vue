@@ -26,6 +26,7 @@ const store = useEqInfoStore();
     display: inline-block;
     left: 110px;
     top: 33px;
+    position: relative;
   }
 }
 </style>
