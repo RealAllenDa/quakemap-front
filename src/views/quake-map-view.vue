@@ -23,6 +23,7 @@ import type { IEEW } from "@/interfaces/parsing/EEW";
 import { useEqInfoStore } from "@/stores/eq-info";
 import { useEEWInfoStore } from "@/stores/eew-info";
 import { PSWAVE_TIME } from "@/assets/pswave";
+import type { ITimeSync } from "@/interfaces/api/Generic";
 
 const psWaveTime = ref<[number?, number?]>([]);
 const psWaveUpdateTimer: Ref<ReturnType<typeof setInterval> | null> = ref(null);
@@ -52,9 +53,33 @@ const infoTypesList: Record<string, number> = {
   Foreign: 0,
 };
 
+const syncedServerTime = ref(0);
+const startSyncTime = ref(0);
+
 const quakeMapInstance = ref<InstanceType<typeof QuakeMap>>();
 const eqStore = useEqInfoStore();
 const eewStore = useEEWInfoStore();
+
+async function calibrateTime() {
+  const startTs = Date.now();
+  await hnapi
+    .makeApiRequest(`/time?ct=${startTs}`, 10000)
+    .then((data: ITimeSync) => {
+      const endTs = Date.now();
+      const serverClientRequestDiff = data.difference;
+      const serverTimestamp = data.server_timestamp;
+
+      syncedServerTime.value =
+        endTs + (serverClientRequestDiff + (serverTimestamp - endTs)) / 2;
+      startSyncTime.value = performance.now();
+      hnapi.debug(
+        "syncedTime =>",
+        syncedServerTime.value,
+        "startSyncTime =>",
+        startSyncTime.value
+      );
+    });
+}
 
 function psWaveTimeRefresh(result: IInfo) {
   let depth, timePassed;
@@ -63,7 +88,9 @@ function psWaveTimeRefresh(result: IInfo) {
   } else {
     depth = parseInt(result.eew.hypocenter.depth.replace("km", ""));
   }
-  timePassed = new Date().getTime() / 1000 + 3600 - result.eew.occur_timestamp;
+  const serverTime =
+    syncedServerTime.value + (performance.now() - startSyncTime.value);
+  timePassed = serverTime / 1000 + 3600 - result.eew.occur_timestamp;
   parsePSWaveTime(depth, timePassed);
   // noinspection JSIncompatibleTypesComparison
   if (psWaveTime.value[1] !== undefined) {
@@ -423,6 +450,7 @@ function updateInfo() {
 }
 
 onMounted(async () => {
+  await calibrateTime();
   await hnapi
     .initialize({
       japan: true,
