@@ -30,6 +30,8 @@ const intensityAddClass = computed(() => {
 });
 const computedIntensity = computed(() => {
   switch (eqStore.maximumIntensity) {
+    case "0":
+      return "--";
     case "-1":
       return "--";
     case "5-":
