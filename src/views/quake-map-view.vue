@@ -98,6 +98,8 @@ function psWaveTimeRefresh(result: IInfo) {
       psWaveTime.value[1],
       "s"
     );
+  } else {
+    quakeMapInstance.value!.removeWaveCircle("s");
   }
   // noinspection JSIncompatibleTypesComparison
   if (psWaveTime.value[0] !== undefined) {
@@ -106,6 +108,8 @@ function psWaveTimeRefresh(result: IInfo) {
       psWaveTime.value[0],
       "p"
     );
+  } else {
+    quakeMapInstance.value!.removeWaveCircle("p");
   }
 }
 

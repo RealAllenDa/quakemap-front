@@ -125,14 +125,24 @@ function deleteAllLayers(): void {
     }
     iconGroup.value!.clearLayers();
     epicenterGroup.value!.clearLayers();
+    removeWaveCircle("s");
+    removeWaveCircle("p");
+  } catch (e) {
+    hnapi.error("Failed to remove layers:", e);
+  }
+}
+
+function removeWaveCircle(circleType: string) {
+  if (circleType === "s") {
     if (sWaveCircle.value !== undefined) {
       map.value!.removeLayer(sWaveCircle.value);
     }
+  } else if (circleType === "p") {
     if (pWaveCircle.value !== undefined) {
       map.value!.removeLayer(pWaveCircle.value);
     }
-  } catch (e) {
-    hnapi.error("Failed to remove layers:", e);
+  } else {
+    hnapi.error("Exhaustive handling of circleType");
   }
 }
 
@@ -310,6 +320,7 @@ defineExpose({
   addWaveCircle,
   parseColorStyle,
   parseMapScale,
+  removeWaveCircle,
 });
 </script>
 
