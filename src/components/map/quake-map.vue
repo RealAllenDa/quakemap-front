@@ -157,11 +157,17 @@ function addMapIntensities(
     const intensityConverted =
       intensityStore.intensityConversion[content.intensity];
     if (content.is_area) {
+      let addLgWarningSign = "",
+        addLgIndex = 0;
+      if (parseInt(content.lg_intensity) >= 3) {
+        addLgWarningSign = "<div class='intensity-add'>!</div>";
+        addLgIndex = 50;
+      }
       const layer = L.marker([content.latitude, content.longitude], {
-        zIndexOffset: intensityConverted.zIndex,
+        zIndexOffset: intensityConverted.zIndex + addLgIndex,
         icon: L.divIcon({
           className: `intensity-big intensity-${intensityConverted.class}`,
-          html: intensityConverted.html,
+          html: intensityConverted.html + addLgWarningSign,
         }),
       });
       iconGroup.value!.addLayer(layer);
@@ -285,7 +291,7 @@ function parseMapScale(isEEW = false): void {
   }
   try {
     if (isEEW) {
-      currentBounds = currentBounds.pad(-0.85);
+      currentBounds = currentBounds.pad(-0.95);
     }
   } catch (e) {
     hnapi.error("Failed to pad bounds:", e);

@@ -4,6 +4,7 @@ import { IEEWAreaIntensity } from "@/interfaces/parsing/EEW";
 interface _IIntensityAreas {
   name: string;
   intensity: string;
+  lg_intensity: string;
   latitude: number;
   longitude: number;
   is_area: boolean;
