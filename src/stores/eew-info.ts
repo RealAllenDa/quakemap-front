@@ -3,6 +3,7 @@ import type { IBannerType } from "@/interfaces/parsing/Banner";
 
 interface State {
   eewReportNum: string;
+  showEew: boolean;
   eewIsDrill: boolean;
   eewIsExpected: boolean;
   eewIsPlum: boolean;
@@ -15,6 +16,7 @@ interface State {
 export const useEEWInfoStore = defineStore("eewInfo", {
   state: (): State => ({
     eewReportNum: "",
+    showEew: false,
     eewIsDrill: false,
     eewIsExpected: false,
     eewIsPlum: false,

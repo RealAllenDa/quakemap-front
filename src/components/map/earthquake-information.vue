@@ -8,7 +8,7 @@
       :label="'Epicenter'"
       :value="eqStore.hypocenterInfo.name"
     />
-    <template v-if="!(isEew && eewStore.eewIsPlum)">
+    <template v-if="!(isEew && (eewStore.eewIsPlum || isAssumedHypocenter))">
       <earthquake-description
         v-if="eqStore.hypocenterInfo.depth !== 'Unknown'"
         :label="'Depth'"
@@ -38,6 +38,13 @@ const props = withDefaults(
 );
 const eqStore = useEqInfoStore();
 const eewStore = useEEWInfoStore();
+
+const isAssumedHypocenter = computed(() => {
+  return (
+    parseInt(eqStore.hypocenterInfo.depth.slice(0, -2)) === 10 &&
+    parseInt(eqStore.magnitude) === 1.0
+  );
+});
 
 const receiveOrOccur = computed(() => {
   return props.isEew ? "Received" : "Occurred";

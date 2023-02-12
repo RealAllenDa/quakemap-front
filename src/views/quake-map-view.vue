@@ -1,8 +1,8 @@
 <template>
   <div id="main-container">
-    <eq-info-container v-if="!showEEW"></eq-info-container>
+    <eq-info-container v-if="!eewStore.showEew"></eq-info-container>
     <quake-map v-if="mapReady" ref="quakeMapInstance"></quake-map>
-    <eew-info-container v-if="showEEW"></eew-info-container>
+    <eew-info-container v-if="eewStore.showEew"></eew-info-container>
   </div>
 </template>
 
@@ -33,7 +33,6 @@ const updateInterval = ref(2500);
 const lastInfo: Ref<object | null> = ref(null);
 const mapReady = ref(false);
 
-const showEEW = ref(false);
 const eewInEffect = ref(false);
 
 const messagesBeforeEEW: Ref<IQuakeInfo[] | null> = ref(null);
@@ -181,9 +180,9 @@ function parseEEWInformation(result: IInfo, mapUpdateOnly = false) {
     hnapi.error("Map has not yet been initialized!");
     return;
   }
-  showEEW.value = true;
+  eewStore.showEew = true;
   if (result.eew.is_cancel) {
-    showEEW.value = false;
+    eewStore.showEew = false;
     eewStore.$patch({
       eewIsDrill: false,
       eewIsExpected: false,
@@ -295,7 +294,7 @@ function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
     clearInterval(psWaveUpdateTimer.value);
     psWaveUpdateTimer.value = null;
   }
-  showEEW.value = false;
+  eewStore.showEew = false;
 
   let finalInfo;
   if (result.info.length > 1) {
