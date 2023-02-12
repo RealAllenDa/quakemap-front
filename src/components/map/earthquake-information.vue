@@ -10,7 +10,10 @@
     />
     <template v-if="!(isEew && (eewStore.eewIsPlum || isAssumedHypocenter))">
       <earthquake-description
-        v-if="eqStore.hypocenterInfo.depth !== 'Unknown'"
+        v-if="
+          eqStore.hypocenterInfo.depth !== 'Unknown' &&
+          eqStore.hypocenterInfo.depth !== '-1km'
+        "
         :label="'Depth'"
         :value="eqStore.hypocenterInfo.depth"
       />

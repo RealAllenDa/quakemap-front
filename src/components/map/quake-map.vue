@@ -170,6 +170,14 @@ function addMapIntensities(
 }
 
 function addEpicenter(content: IHypocenter): void {
+  if (
+    content.depth === "-1km" &&
+    content.latitude === -200 &&
+    content.latitude === -200
+  ) {
+    // Probably unknown hypocenter
+    return;
+  }
   const epicenterMarker = L.marker([content.latitude, content.longitude], {
     icon: epicenterIcon,
   });
