@@ -97,4 +97,54 @@ function updateInfo() {
     box-sizing: border-box;
   }
 }
+
+.shake-50 {
+  background: $shake-50;
+  color: white;
+}
+
+.shake-100 {
+  background: $shake-100;
+  color: black;
+}
+
+.shake-500 {
+  background: $shake-500;
+  color: white;
+}
+
+.shake-1000 {
+  background: $shake-1000;
+  color: white;
+}
+
+.shake-2000 {
+  background: $shake-2000;
+  color: white;
+}
+
+.shake-3000 {
+  background: $shake-3000;
+  color: white;
+}
+
+.shake-3000-above {
+  background: black;
+  color: yellow;
+}
+
+.shake-default {
+  background: $info-background-color;
+  color: white;
+}
+
+* {
+  --info-background-color: #{$info-background-color};
+  --green-warn: #{$green-warn};
+  --green-warn-label: #{$green-warn-label};
+  --yellow-warn: #{$yellow-warn};
+  --yellow-warn-label: #{$yellow-warn-label};
+  --red-warn: #{$red-warn};
+  --red-warn-label: #{$red-warn-label};
+}
 </style>
