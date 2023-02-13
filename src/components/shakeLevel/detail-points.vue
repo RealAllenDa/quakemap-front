@@ -67,6 +67,11 @@ const pointClass = computed(() => {
     }
   } else {
     hnapi.error("Exhaustive handling of pointClass");
+    return [
+      "var(--info-background-color)",
+      "var(--info-background-color)",
+      "white",
+    ];
   }
 });
 </script>
