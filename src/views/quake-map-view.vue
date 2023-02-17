@@ -29,6 +29,8 @@ const psWaveTime = ref<[number?, number?]>([]);
 const psWaveUpdateTimer: Ref<ReturnType<typeof setInterval> | null> = ref(null);
 const updateTimer: Ref<null | ReturnType<typeof setInterval>> = ref(null);
 const updateInterval = ref(2500);
+const calibrateTimer: Ref<null | ReturnType<typeof setInterval>> = ref(null);
+const calibrateInterval = ref(3600 * 1000);
 
 const lastInfo: Ref<object | null> = ref(null);
 const mapReady = ref(false);
@@ -74,6 +76,8 @@ async function calibrateTime() {
       hnapi.debug(
         "syncedTime =>",
         syncedServerTime.value,
+        "currentTime =>",
+        endTs,
         "startSyncTime =>",
         startSyncTime.value
       );
@@ -460,6 +464,9 @@ function updateInfo() {
 
 onMounted(async () => {
   await calibrateTime();
+  calibrateTimer.value = setInterval(async () => {
+    await calibrateTime();
+  }, calibrateInterval.value);
   await hnapi
     .initialize({
       japan: true,
@@ -477,6 +484,9 @@ onUnmounted(() => {
   }
   if (psWaveUpdateTimer.value !== null) {
     clearInterval(psWaveUpdateTimer.value);
+  }
+  if (calibrateTimer.value !== null) {
+    clearInterval(calibrateTimer.value);
   }
 });
 </script>
