@@ -89,8 +89,8 @@ export const useMapStore = defineStore("map", {
     tsunamiMapOkinawaStyle: {
       zoomControl: false,
       center: {
-        lat: 26.674949874061767,
-        lng: 127.24804714322093,
+        lat: 26.54922257769204,
+        lng: 127.08984375000001,
       },
       zoom: 5,
       attributionControl: false,

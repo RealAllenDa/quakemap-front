@@ -142,9 +142,9 @@ function parseMapStyle(feature?: ITsunamiGeoJsonFeatures): PathOptions {
       stroke: false,
     };
   }
-  let weight = 5;
+  let weight = 7;
   if (feature.properties.grade === "MajorWarning") {
-    weight = 7.5;
+    weight = 10;
   }
   return {
     stroke: true,
