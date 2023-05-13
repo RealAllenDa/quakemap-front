@@ -66,10 +66,10 @@ const intensityExplanation = computed(() => {
       parseInt(eqStore.magnitude) === 1.0
     ) {
       // Probably virtual epicenter
-      return ["Assumed Epicenter", "explanation-virtual"];
+      return ["Hypothetical Epicenter", "explanation-virtual"];
     }
   }
-  return ["Unknown", "explanation-unknown"];
+  return ["Hypothetical Epicenter", "explanation-virtual"];
 });
 const intensityAddClass = computed(() => {
   return props.isEew ? "eew-intensity-add" : "intensity-add";
@@ -168,7 +168,7 @@ const addThings = computed(() => {
 }
 
 .explanation-virtual {
-  font-size: 66px !important;
+  font-size: 36px !important;
   margin-left: 10px;
   margin-top: 5px;
 }
