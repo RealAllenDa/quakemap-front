@@ -297,8 +297,7 @@ function setMapInfo(result: ITsunamiInfo) {
 
   if (fetchType.value === "forecast") {
     if (
-      result.map === null ||
-      result.info.forecast_areas === null ||
+      result.info.forecast_areas === null &&
       parseInt(result.status_forecast) !== 1
     ) {
       hnapi.warn("Info does not contain forecast info/Info not available");
@@ -306,11 +305,7 @@ function setMapInfo(result: ITsunamiInfo) {
       return;
     }
   } else {
-    if (
-      result.map === null ||
-      result.map.areas === null ||
-      parseInt(result.status) !== 1
-    ) {
+    if (result.map === null && parseInt(result.status) !== 1) {
       hnapi.warn("Info does not contain map info/Info not available");
       receiveTime.value = "XXXX-XX-XX XX:XX";
       return;
@@ -332,7 +327,10 @@ function setMapInfo(result: ITsunamiInfo) {
   const mapOnEachFeature =
     fetchType.value === "information" ? onEachFeature : forecastOnEachFeature;
 
-  receiveTime.value = result.map.time!;
+  receiveTime.value =
+    fetchType.value === "information"
+      ? result.map!.time!
+      : result.info.receive_time!;
 
   layerMain.value = L.geoJson(addGeoJson, {
     style: mapStyleParser,
