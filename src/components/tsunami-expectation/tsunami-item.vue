@@ -25,7 +25,7 @@
     v-else-if="props.height !== 'Unknown' && props.grade === 'Forecast'"
     class="tsunami-forecast"
   >
-    Less than 0.2m
+    Below 0.2m
   </div>
   <div v-else class="tsunami-height" v-html="props.height"></div>
 </template>
