@@ -40,8 +40,8 @@ const className = computed(() => {
 }
 
 .banner-foreign {
-  width: 750px;
-  height: 40px;
+  width: 750px !important;
+  height: 40px !important;
   z-index: 999999;
   border-top: 0 !important;
 }
