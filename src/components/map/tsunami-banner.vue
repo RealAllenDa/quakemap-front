@@ -11,8 +11,12 @@ import { computed } from "vue";
 const props = defineProps<{
   type: string;
 }>();
-const show = true;
 const store = useEqInfoStore();
+const show = computed(() => {
+  return props.type === "foreign"
+    ? store.tsunamiCommentsForeign !== "None"
+    : true;
+});
 
 const tsunamiComments = computed(() => {
   return props.type === "foreign"
