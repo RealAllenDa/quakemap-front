@@ -4,6 +4,8 @@ ARG sentry_token
 ARG environment=production
 WORKDIR /app
 COPY package*.json ./
+RUN npm set SENTRYCLI_CDNURL=https://cdn.npm.taobao.org/dist/sentry-cli
+RUN npm set sentrycli_cdnurl=https://cdn.npm.taobao.org/dist/sentry-cli
 RUN npm install
 COPY . .
 ENV SENTRY_AUTH_TOKEN=$sentry_token
