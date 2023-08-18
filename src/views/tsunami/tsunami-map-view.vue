@@ -79,6 +79,9 @@ const boundJapan = ref<LatLngBounds>();
 const displayOkinawa = ref(false);
 const displayOgasawara = ref(false);
 
+// Only populated when using fallback.
+const warningAreas = ref<Record<string, string>>({});
+
 onMounted(async () => {
   const route = useRoute();
   if (route.query.type === "forecast") {
@@ -153,6 +156,41 @@ function parseMapStyle(feature?: ITsunamiGeoJsonFeatures): PathOptions {
   };
 }
 
+function fallbackParseMapStyle(feature?: ITsunamiGeoJsonFeatures): PathOptions {
+  if (feature === undefined) {
+    return {
+      stroke: false,
+    };
+  }
+  let grade = warningAreas.value[feature.properties.name];
+  let weight = 7;
+  let color;
+  // noinspection JSIncompatibleTypesComparison
+  if (grade === undefined) {
+    return {
+      stroke: false,
+    };
+  }
+  if (grade === "MajorWarning") {
+    weight = 10;
+    color = "#B65BD2";
+    currentGrades.value.MajorWarning = true;
+  } else if (grade === "Warning") {
+    color = "#DE3329";
+    currentGrades.value.Warning = true;
+  } else if (grade === "Watch") {
+    color = "#E5A72C";
+    currentGrades.value.Advisory = true;
+  } else {
+    console.error(`Exhaustive handling of grade -> ${grade}`);
+  }
+  return {
+    stroke: true,
+    color: color,
+    weight: weight,
+  };
+}
+
 function parseForecastMapStyle(feature?: ITsunamiGeoJsonFeatures): PathOptions {
   if (feature === undefined) {
     return {
@@ -179,16 +217,22 @@ function onEachFeature(feature: ITsunamiGeoJsonFeatures, layer: Layer) {
   if (feature.properties.name === "奄美群島・トカラ列島") {
     // @ts-ignore
     layer.options.stroke = false;
+    return;
   }
-  const currentGrade = feature.properties.grade;
+  const currentGrade = useFallback.value
+    ? warningAreas.value[feature.properties.name]
+    : feature.properties.grade;
   if (currentGrade === "Watch") {
     currentGrades.value.Advisory = true;
-  }
-  if (currentGrade === "Warning") {
+  } else if (currentGrade === "Warning") {
     currentGrades.value.Warning = true;
-  }
-  if (currentGrade === "MajorWarning") {
+  } else if (currentGrade === "MajorWarning") {
     currentGrades.value.MajorWarning = true;
+  } else {
+    // No tsunami info available.
+    // @ts-ignore
+    layer.options.stroke = false;
+    return;
   }
   if (
     japanMapLatLngBounds.contains([
@@ -220,6 +264,7 @@ function onEachFeature(feature: ITsunamiGeoJsonFeatures, layer: Layer) {
       // @ts-ignore
       .contains([layer._bounds._northEast, layer._bounds._southWest])
   ) {
+    console.log(layer);
     displayOkinawa.value = true;
   }
   if (
@@ -287,6 +332,19 @@ function forecastOnEachFeature(feature: ITsunamiGeoJsonFeatures, layer: Layer) {
   }
 }
 
+function populateWarningAreas(result: ITsunamiInfo) {
+  if (result.info.areas === null) {
+    console.error("Failed to populate warning areas: is null");
+    return;
+  }
+  warningAreas.value = {};
+  result.info.areas.forEach((area) => {
+    warningAreas.value[area.name] = area.grade;
+  });
+}
+
+const useFallback = ref(false);
+
 function setMapInfo(result: ITsunamiInfo) {
   if (flashTimer.value !== null) {
     clearInterval(flashTimer.value);
@@ -318,27 +376,51 @@ function setMapInfo(result: ITsunamiInfo) {
     });
   }
 
-  const addGeoJson =
-    fetchType.value === "information"
-      ? result.map!.areas!
-      : toRaw(useGeoJsonStore().tsunamiAreas);
-  const mapStyleParser =
-    fetchType.value === "information" ? parseMapStyle : parseForecastMapStyle;
-  const mapOnEachFeature =
+  let addGeoJson;
+  if (fetchType.value === "forecast") {
+    addGeoJson = toRaw(useGeoJsonStore().tsunamiAreas);
+  } else if (result.info.areas !== null) {
+    addGeoJson = toRaw(useGeoJsonStore().tsunamiAreas);
+    useFallback.value = true;
+  } else if (result.map !== null) {
+    console.warn("Not forecast, but info.areas is null");
+    addGeoJson = result.map!.areas!;
+  } else {
+    console.error("No areas info available");
+    return;
+  }
+
+  let mapOnEachFeature, mapStyleParser;
+  if (useFallback.value) {
+    populateWarningAreas(result);
+    mapStyleParser = fallbackParseMapStyle;
+  } else {
+    mapStyleParser =
+      fetchType.value === "information" ? parseMapStyle : parseForecastMapStyle;
+  }
+
+  mapOnEachFeature =
     fetchType.value === "information" ? onEachFeature : forecastOnEachFeature;
 
-  receiveTime.value =
-    fetchType.value === "information"
-      ? result.map!.time!
-      : result.info.receive_time!;
+  if (fetchType.value === "forecast") {
+    receiveTime.value = result.info.receive_time!;
+  }
+  if (useFallback.value) {
+    receiveTime.value = result.info!.receive_time!;
+  } else if (result.map !== null) {
+    console.warn("Not forecast, but info.receive_time is null");
+    receiveTime.value = result.map!.time!;
+  } else {
+    console.error("No receive time available");
+  }
 
-  layerMain.value = L.geoJson(addGeoJson, {
+  layerMain.value = L.geoJson(addGeoJson!, {
     style: mapStyleParser,
     pane: "tilePane",
     onEachFeature: mapOnEachFeature,
   });
   if (displayOkinawa.value) {
-    layerOkinawa.value = L.geoJson(addGeoJson, {
+    layerOkinawa.value = L.geoJson(addGeoJson!, {
       pane: "tilePane",
       style: mapStyleParser,
     });
@@ -348,7 +430,7 @@ function setMapInfo(result: ITsunamiInfo) {
     enableOkinawa.value = false;
   }
   if (displayOgasawara.value) {
-    layerOgasawara.value = L.geoJson(addGeoJson, {
+    layerOgasawara.value = L.geoJson(addGeoJson!, {
       pane: "tilePane",
       style: mapStyleParser,
     });
@@ -365,9 +447,14 @@ function setMapInfo(result: ITsunamiInfo) {
     !enableOgasawara.value &&
     !enableOkinawa.value
   ) {
-    mapMain.value!.map!.fitBounds(boundJapan.value!, { padding: [0, 20] });
+    mapMain.value!.map!.fitBounds(boundJapan.value!, {
+      padding: [0, 20],
+      maxZoom: 7,
+    });
   } else {
-    mapMain.value!.map!.fitBounds(japanMapLatLngBounds);
+    mapMain.value!.map!.fitBounds(japanMapLatLngBounds, {
+      maxZoom: 7,
+    });
   }
 
   setMapFlash();
