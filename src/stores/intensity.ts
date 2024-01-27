@@ -61,7 +61,7 @@ export const useIntensityStore = defineStore("intensity", {
       },
       "5?": {
         class: "5_and_up",
-        html: "6<div class='intensity-add'>?</div>",
+        html: "5<div class='intensity-add'>↑</div>",
         zIndex: 450,
         specialIntensity: true,
       },
