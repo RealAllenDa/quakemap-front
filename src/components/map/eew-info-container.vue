@@ -13,7 +13,11 @@
     <eew-banner class="sub-window"></eew-banner>
     <eew-info></eew-info>
     <div class="eew-earthquake sub-window">
-      <intensity-icon :is-eew="true"></intensity-icon>
+      <intensity-with-lg-icon
+        v-if="eqStore.maximumLgIntensity !== ''"
+        :is-eew="true"
+      ></intensity-with-lg-icon>
+      <intensity-icon v-else :is-eew="true"></intensity-icon>
       <earthquake-information :is-eew="true"></earthquake-information>
     </div>
   </div>
@@ -24,10 +28,13 @@ import EewFlag from "@/components/map/eew-flag.vue";
 import EewBanner from "@/components/map/eew-banner.vue";
 import EewInfo from "@/components/map/eew-info.vue";
 import IntensityIcon from "@/components/map/intensity-icon.vue";
+import IntensityWithLgIcon from "@/components/map/intensity-with-lg-icon.vue";
 import EarthquakeInformation from "@/components/map/earthquake-information.vue";
 import { useEEWInfoStore } from "@/stores/eew-info";
+import { useEqInfoStore } from "@/stores/eq-info";
 
 const store = useEEWInfoStore();
+const eqStore = useEqInfoStore();
 </script>
 
 <style lang="scss" scoped>

@@ -206,6 +206,7 @@ function parseEEWInformation(result: IInfo, mapUpdateOnly = false) {
     displayEEWInformation(result.eew);
     eewStore.eewIsPlum = result.eew.is_plum;
     eqStore.maximumIntensity = result.eew.max_intensity;
+    eqStore.maximumLgIntensity = result.eew.max_lg_intensity;
     if (result.eew.is_final) {
       eewStore.eewReportNum = `#${result.eew.report_num}-F`;
     } else {

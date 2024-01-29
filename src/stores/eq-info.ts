@@ -8,6 +8,7 @@ import type { IBannerType } from "@/interfaces/parsing/Banner";
 interface State {
   hypocenterInfo: IHypocenter;
   maximumIntensity: string;
+  maximumLgIntensity: string;
   occurTime: string;
   magnitude: string;
   currentType: string;
@@ -26,6 +27,7 @@ export const useEqInfoStore = defineStore("eqInfo", {
       longitude: -999,
     },
     maximumIntensity: "--",
+    maximumLgIntensity: "",
     occurTime: "XXXX/XX/XX XX:XX",
     magnitude: "---",
     currentType: "Unknown",
@@ -83,6 +85,10 @@ export const useEqInfoStore = defineStore("eqInfo", {
         text: "Foreign: Tsunami possible in the Pacific Ocean",
         className: "intensity-8",
       },
+      WarningNorthwestPacific: {
+        text: "Foreign: Tsunami possible in the northwest Pacific Ocean",
+        className: "intensity-8",
+      },
       WarningPacificWide: {
         text: "Foreign: Tsunami possible in wide area of Pacific Ocean",
         className: "intensity-9",
@@ -117,6 +123,9 @@ export const useEqInfoStore = defineStore("eqInfo", {
       }
     },
     setMagnitude(magnitude: string) {
+      if (this.magnitude == "Over 8") {
+        this.magnitude = magnitude;
+      }
       if (parseFloat(magnitude) < 0 || isNaN(parseFloat(magnitude))) {
         this.magnitude = "Unknown";
       } else {

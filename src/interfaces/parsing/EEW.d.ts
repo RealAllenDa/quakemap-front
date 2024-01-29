@@ -23,6 +23,7 @@ export interface IEEW {
   is_test: boolean;
   magnitude: string;
   max_intensity: string;
+  max_lg_intensity: string;
   p_wave: number | null;
   s_wave: number | null;
   report_flag: string;

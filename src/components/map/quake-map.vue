@@ -18,6 +18,7 @@ import { useMapStore } from "@/stores/map";
 import { onMounted, ref, toRaw } from "vue";
 import { useIntensityStore } from "@/stores/intensity";
 import epicenterSvg from "@/assets/epicenter.svg";
+import { parseInt } from "lodash";
 
 const geoJsonStore = useGeoJsonStore();
 const mapConfigStore = useMapStore();
@@ -158,15 +159,22 @@ function addMapIntensities(
       intensityStore.intensityConversion[content.intensity];
     if (content.is_area) {
       let addLgWarningSign = "",
-        addLgIndex = 0;
+        addLgIndex = 0,
+        addLgClass = "";
       if (parseInt(content.lg_intensity) >= 3) {
         addLgWarningSign = "<div class='intensity-add'>!</div>";
         addLgIndex = 50;
+        addLgClass = `intensity-lg-blink intensity-lg-${content.lg_intensity}`;
+      } else if (
+        parseInt(content.lg_intensity) >= 1 &&
+        parseInt(content.intensity) < 3
+      ) {
+        addLgWarningSign = "<div class='intensity-add'>△</div>";
       }
       const layer = L.marker([content.latitude, content.longitude], {
         zIndexOffset: intensityConverted.zIndex + addLgIndex,
         icon: L.divIcon({
-          className: `intensity-big intensity-${intensityConverted.class}`,
+          className: `intensity-big intensity-${intensityConverted.class} ${addLgClass}`,
           html: intensityConverted.html + addLgWarningSign,
         }),
       });
@@ -379,5 +387,32 @@ $map-background-color: #1d1d1d;
 
 .special-intensity-add {
   font-size: 12px;
+}
+
+@keyframes blink {
+  50% {
+    border-color: unset;
+  }
+}
+
+.intensity-lg-blink {
+  animation: blink 1s;
+  animation-iteration-count: infinite;
+}
+
+.intensity-lg-1 {
+  border: 1px solid #94bdff;
+}
+
+.intensity-lg-2 {
+  border: 1px solid #737300;
+}
+
+.intensity-lg-3 {
+  border: 1px solid #f6829d;
+}
+
+.intensity-lg-4 {
+  border: 1px solid #e59cff;
 }
 </style>
