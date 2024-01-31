@@ -178,5 +178,5 @@ class HNAPI {
   }
 }
 
-const hnapi = new HNAPI(true);
+const hnapi = new HNAPI();
 export default hnapi;

@@ -14,6 +14,7 @@ interface ITsunamiComments {
 }
 
 export interface IQuakeInfo {
+  id: string;
   area_intensity: IIntensities;
   hypocenter: IHypocenter;
   magnitude: string;

@@ -307,8 +307,20 @@ function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
 
   let finalInfo;
   if (result.info.length > 1) {
-    hnapi.warn("RACE: multiple info available.");
-    finalInfo = selectEarthquakeInformation(result.info);
+    if (
+      result.info[0].id === result.info[1].id &&
+      result.info.length === 2 &&
+      ((result.info[0].type === "ScalePrompt" &&
+        result.info[1].type === "Destination") ||
+        (result.info[0].type === "Destination" &&
+          result.info[1].type === "ScalePrompt"))
+    ) {
+      // expected behavior
+      finalInfo = result.info;
+    } else {
+      hnapi.warn("RACE: multiple info available.");
+      finalInfo = selectEarthquakeInformation(result.info);
+    }
   } else {
     finalInfo = result.info;
   }
