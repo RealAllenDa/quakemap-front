@@ -305,18 +305,23 @@ function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
   }
   eewStore.showEew = false;
 
-  let finalInfo;
+  let finalInfo,
+    firstTime = false;
   if (result.info.length > 1) {
     if (
       result.info[0].id === result.info[1].id &&
       result.info.length === 2 &&
-      ((result.info[0].type === "ScalePrompt" &&
-        result.info[1].type === "Destination") ||
-        (result.info[0].type === "Destination" &&
-          result.info[1].type === "ScalePrompt"))
+      result.info[0].type === "ScalePrompt" &&
+      result.info[1].type === "Destination"
     ) {
-      // expected behavior
-      finalInfo = result.info;
+      console.log(currentEarthquakeInformation.value.info);
+      if (currentEarthquakeInformation.value.info.length === 0) {
+        // expected behavior
+        finalInfo = result.info;
+        firstTime = true;
+      } else {
+        finalInfo = [result.info[1]];
+      }
     } else {
       hnapi.warn("RACE: multiple info available.");
       finalInfo = selectEarthquakeInformation(result.info);
@@ -353,7 +358,9 @@ function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
         quakeMapInstance.value!.parseMapScale();
       });
     } else if (content.type === "Destination") {
-      parseEarthquakeInformation(currentEarthquakeInformation.value);
+      if (!firstTime) {
+        parseEarthquakeInformation(currentEarthquakeInformation.value);
+      }
       // Set currentType back to Destination, since the recursive
       // parseEarthquakeInformation() had set currentType to others.
       eqStore.currentType = content.type;
