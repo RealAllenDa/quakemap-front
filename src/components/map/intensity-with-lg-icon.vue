@@ -5,12 +5,9 @@
       :class="'intensity-' + computedClass"
       class="intensity-icon"
     >
-      <span class="intensity-label">Maximum Int.</span>
+      <span class="intensity-label">Maximum Intensity</span>
       <div class="intensity">
-        <span v-if="addThings !== ''" style="margin-left: 30px">
-          {{ computedIntensity }}
-        </span>
-        <span v-else class="margin-add">{{ computedIntensity }}</span>
+        <span class="intensity-number">{{ computedIntensity }}</span>
         <span v-if="addThings !== ''" :class="intensityAddClass">{{
           addThings
         }}</span>
@@ -30,7 +27,7 @@
         Long-Period Int.
       </span>
       <div class="intensity">
-        <span style="margin-left: 20px">{{ eqStore.maximumLgIntensity }}</span>
+        <span class="intensity-number">{{ eqStore.maximumLgIntensity }}</span>
       </div>
     </div>
   </div>
@@ -81,9 +78,6 @@ const intensityExplanation = computed(() => {
     }
   }
   return ["Hypothetical Epicenter", "explanation-virtual"];
-});
-const intensityAddClass = computed(() => {
-  return props.isEew ? "eew-intensity-add" : "intensity-add";
 });
 const computedIntensity = computed(() => {
   switch (eqStore.maximumIntensity) {
@@ -145,6 +139,10 @@ const addThings = computed(() => {
     return "";
   }
 });
+const intensityAddClass = computed(() => [
+  props.isEew ? "eew-intensity-add" : "intensity-add",
+  addThings.value === "+" ? "intensity-add-up" : "intensity-add-down",
+]);
 </script>
 
 <style lang="scss" scoped>
@@ -152,94 +150,149 @@ const addThings = computed(() => {
 
 .intensity-wrapper {
   width: 275px;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset -1px 0 rgba(0, 0, 0, 0.18);
 }
 
 .intensity-icon {
+  position: relative;
+  isolation: isolate;
   width: 100%;
   height: 50%;
   box-sizing: border-box;
-  border: 4px solid $border-color;
+  display: grid;
+  place-items: center;
+  padding: 8px 14px;
+  overflow: hidden;
+  border: 0;
   background: $intensity-0;
 }
 
+.intensity-icon::before {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  content: "";
+  background: radial-gradient(
+      circle at 78% 50%,
+      rgba(255, 255, 255, 0.25),
+      transparent 45%
+    ),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(0, 0, 0, 0.18));
+}
+
+.intensity-label,
+.lg-intensity-label,
 .intensity {
-  display: inline-block;
+  position: relative;
+  z-index: 1;
+}
+
+.intensity-icon + .intensity-icon {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.intensity {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  transform: translateY(12px);
 
   span {
     display: inline-block;
-    font-size: 55px;
     font-weight: bolder;
     font-style: italic;
+    line-height: 1;
   }
+}
+
+.intensity-number {
+  font-size: 66px;
+  letter-spacing: 0;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.24);
 }
 
 .explanation-foreign {
   font-size: 25px !important;
-  margin-left: 95px;
 }
 
 .explanation-eruption {
   font-size: 25px !important;
-  margin-left: 85px;
 }
 
 .explanation-deep {
   font-size: 25px !important;
-  margin-left: 95px;
 }
 
 .explanation-plum {
   font-size: 25px !important;
-  margin-left: 95px;
 }
 
 .explanation-virtual {
   font-size: 22px !important;
-  margin-left: 10px;
 }
 
 .explanation-unknown {
   font-size: 22px !important;
-  margin-left: 10px;
-  margin-top: 5px;
 }
 
 .intensity-label {
-  font-size: 20px;
-  font-weight: bold;
+  position: absolute;
+  top: 7px;
+  left: 10px;
+  z-index: 2;
   display: inline-block;
-  padding-left: 15px;
+  width: max-content;
+  max-width: calc(100% - 20px);
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: rgba(7, 12, 15, 0.24);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.08;
+  text-transform: uppercase;
 }
 
 .lg-intensity-label {
-  font-size: 20px;
-  font-weight: bold;
+  position: absolute;
+  top: 7px;
+  left: 10px;
+  z-index: 2;
   display: inline-block;
-  padding-left: 15px;
+  width: max-content;
+  max-width: calc(100% - 20px);
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: rgba(7, 12, 15, 0.24);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.08;
+  text-transform: uppercase;
 }
 
 .intensity-unknown {
   .intensity-label {
-    padding-left: 10px !important;
-    padding-top: 5px !important;
+    padding: 0 !important;
   }
 }
 
 .intensity-add {
-  font-size: 35px !important;
-  position: relative;
-  bottom: 20px;
+  font-size: 34px !important;
+  position: static;
+  margin-left: 3px;
 }
 
 .eew-intensity-add {
-  font-size: 45px !important;
-  position: relative;
-  bottom: 20px;
-}
-
-.margin-add {
-  margin-left: 45px;
+  font-size: 34px !important;
+  position: static;
+  margin-left: 3px;
 }
 </style>

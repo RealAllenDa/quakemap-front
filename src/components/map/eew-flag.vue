@@ -21,13 +21,16 @@ const props = withDefaults(
 @import "@/assets/colors.scss";
 
 .flags {
-  padding: 5px;
+  padding: 6px 10px;
   font-weight: bolder;
-  font-size: 20px;
-  border: 2px solid $intensity-1;
+  font-size: 13px;
+  line-height: 1;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 6px;
   position: absolute;
-  top: 20px;
+  top: 10px;
   left: 10px;
   text-align: center;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.24);
 }
 </style>

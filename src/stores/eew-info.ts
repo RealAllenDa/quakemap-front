@@ -33,7 +33,7 @@ export const useEEWInfoStore = defineStore("eewInfo", {
         className: "info-background",
       },
       Warning: {
-        text: "Earthquake Early Warning (Warning) - Strong Shaking Expected",
+        text: "Earthquake Early Warning (Warning)",
         className: "intensity-8",
       },
       Fetching: {
@@ -51,7 +51,7 @@ export const useEEWInfoStore = defineStore("eewInfo", {
         className: "intensity-2",
       },
       Deep: {
-        text: "Deep earthquake - Information may not be accurate",
+        text: "Deep earthquake - Information might not be accurate",
         className: "deep-earthquake",
       },
       Wait: {

@@ -17,29 +17,45 @@ const store = useEEWInfoStore();
 @import "@/assets/colors.scss";
 
 .eew-information {
-  border: 4px solid $border-color;
-  overflow: hidden;
-  line-height: 36px;
   display: flex;
+  align-items: stretch;
+  min-height: 0;
+  overflow: hidden;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(17, 24, 28, 0.78);
 }
 
 .report-number {
   width: 80px;
   height: 100%;
-  background: $intensity-1;
-  border-right: 4px solid $border-color;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 80px;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(70, 100, 110, 0.88);
   text-align: center;
-  font-weight: bolder;
   font-size: 23px;
+  font-weight: bolder;
 }
 
 .eew-advice {
-  width: 675px;
+  width: auto;
+  min-width: 0;
   height: 100%;
-  background: $info-background-color;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  padding: 0 16px;
+  overflow: hidden;
+  background: rgba(17, 24, 28, 0.72);
   text-align: center;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: bold;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .deep-earthquake {

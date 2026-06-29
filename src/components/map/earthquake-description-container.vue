@@ -24,14 +24,16 @@ const eqStore = useEqInfoStore();
 
 .earthquake-description {
   width: 100%;
+  height: 100%;
   display: flex;
   flex-wrap: nowrap;
+  background: rgba(17, 24, 28, 0.82);
 }
 
 .earthquake-info {
-  width: 475px;
+  width: calc(100% - 275px);
   height: 100%;
-  border: 4px solid $border-color;
-  background: $info-background-color;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(17, 24, 28, 0.72);
 }
 </style>
