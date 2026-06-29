@@ -1,7 +1,10 @@
 <template>
   <main
     id="main-container"
-    :class="{ 'earthquake-map-page--eew': eewStore.showEew }"
+    :class="{
+      'earthquake-map-page--eew': eewStore.showEew,
+      'earthquake-map-page--symbol-intensities': symbolIntensityStyleActive,
+    }"
     class="earthquake-map-page"
   >
     <quake-map
@@ -53,6 +56,7 @@ const calibrateInterval = ref(3600 * 1000);
 
 const lastInfo: Ref<object | null> = ref(null);
 const mapReady = ref(false);
+const symbolIntensityStyleActive = ref(false);
 
 const eewInEffect = ref(false);
 
@@ -246,6 +250,7 @@ function parseEEWInformation(result: IInfo, mapUpdateOnly = false) {
     hnapi.error("Map has not yet been initialized!");
     return;
   }
+  symbolIntensityStyleActive.value = false;
   eewStore.showEew = true;
   if (result.eew.is_cancel) {
     eewStore.showEew = false;
@@ -388,6 +393,10 @@ function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
     finalInfo = result.info;
   }
   finalInfo.forEach((content: IQuakeInfo) => {
+    const useSymbolIntensityStyle =
+      content.type === "DetailScale" &&
+      Object.keys(content.area_intensity.station).length >= 250;
+    symbolIntensityStyleActive.value = useSymbolIntensityStyle;
     eqStore.currentType = content.type;
     if (
       parseInt(content.max_intensity) === 99999 ||
@@ -448,8 +457,10 @@ function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
       eqStore.maximumIntensity = content.max_intensity;
       quakeMapInstance.value!.deleteAllLayers();
       nextTick(() => {
+        const stations = content.area_intensity.station;
         quakeMapInstance.value!.addMapIntensities(
-          content.area_intensity.station
+          stations,
+          useSymbolIntensityStyle
         );
         quakeMapInstance.value!.addEpicenter(content.hypocenter);
         quakeMapInstance.value!.parseMapScale();
@@ -640,6 +651,36 @@ onUnmounted(() => {
       90deg,
       rgba(60, 11, 18, 0.44) 0,
       rgba(8, 13, 16, 0.16) 36%,
+      rgba(8, 13, 16, 0) 64%
+    );
+}
+
+.earthquake-map-page--symbol-intensities::after {
+  background: linear-gradient(
+      180deg,
+      rgba(8, 13, 16, 0.3) 0,
+      rgba(8, 13, 16, 0.05) 34%,
+      rgba(8, 13, 16, 0) 58%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(8, 13, 16, 0.3) 0,
+      rgba(8, 13, 16, 0.05) 30%,
+      rgba(8, 13, 16, 0) 62%
+    );
+}
+
+.earthquake-map-page--eew.earthquake-map-page--symbol-intensities::after {
+  background: linear-gradient(
+      180deg,
+      rgba(60, 11, 18, 0.3) 0,
+      rgba(8, 13, 16, 0.05) 42%,
+      rgba(8, 13, 16, 0) 64%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(60, 11, 18, 0.3) 0,
+      rgba(8, 13, 16, 0.05) 36%,
       rgba(8, 13, 16, 0) 64%
     );
 }

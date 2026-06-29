@@ -8,7 +8,13 @@
 </template>
 
 <script lang="ts" setup>
-import type { FeatureCollection, Geometry, Position } from "geojson";
+import type {
+  Feature,
+  FeatureCollection,
+  Geometry,
+  Point,
+  Position,
+} from "geojson";
 import type { ExpressionSpecification } from "@maplibre/maplibre-gl-style-spec";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -52,9 +58,32 @@ const epicenterMarkers: maplibregl.Marker[] = [];
 
 const areaColorSourceId = "quake-area-coloring";
 const areaColorLayerId = "quake-area-coloring-fill";
+const intensityMarkerSourceId = "quake-intensity-markers";
+const intensityMarkerLayerId = "quake-intensity-markers-symbol";
 const sWaveSourceId = "quake-s-wave";
 const pWaveSourceId = "quake-p-wave";
 const mapElementScale = computed(() => (props.scaleElements ? 1.5 : 1));
+
+interface IntensityMarkerProperties {
+  image: string;
+  sortKey: number;
+}
+
+interface IntensityMarkerStyle {
+  imageId: string;
+  isArea: boolean;
+  label: string;
+  modifier: string;
+  color: string;
+  textColor: string;
+  longPeriodIntensity: number;
+  sortKey: number;
+}
+
+let intensityMarkerData: FeatureCollection<Point, IntensityMarkerProperties> =
+  emptyIntensityMarkerData();
+const intensityMarkerCoordinates: [number, number][] = [];
+const intensityMarkerStyles = new Map<string, IntensityMarkerStyle>();
 
 onMounted(() => {
   initializeMap();
@@ -204,7 +233,7 @@ function runPendingActions(): void {
 function deleteAllLayers(): void {
   runWhenReady(() => {
     removeAreaColoring();
-    clearMarkers(intensityMarkers);
+    clearIntensityMarkers();
     clearMarkers(epicenterMarkers);
     removeWaveCircle("s");
     removeWaveCircle("p");
@@ -250,36 +279,59 @@ function removeWaveLayer(sourceId: string): void {
 }
 
 function addMapIntensities(
-  intensity: AllStationIntensities | AllAreaIntensities
+  intensity: AllStationIntensities | AllAreaIntensities,
+  useSymbolStyle = false
 ): void {
   runWhenReady(() => {
-    for (const i in intensity) {
-      const content = intensity[i];
-      if (content.intensity === null) {
-        content.intensity = "0";
-      }
-      const intensityConverted =
-        intensityStore.intensityConversion[content.intensity] ??
-        intensityStore.intensityConversion["0"];
-      const markerElement = document.createElement("div");
-      markerElement.className = content.is_area
-        ? `intensity-big intensity-${intensityConverted.class}`
-        : `intensity-small intensity-${intensityConverted.class}`;
-      markerElement.innerHTML = intensityConverted.html;
-      markerElement.style.zIndex = intensityConverted.zIndex.toString();
-
-      if (content.is_area) {
-        applyLongPeriodWarning(markerElement, content.lg_intensity);
-      }
-
-      const marker = new maplibregl.Marker({
-        anchor: "center",
-        element: markerElement,
-      })
-        .setLngLat([content.longitude, content.latitude])
-        .addTo(map.value!);
-      intensityMarkers.push(marker);
+    if (intensity === undefined) {
+      console.warn("no intensities available");
+      return;
     }
+
+    if (!useSymbolStyle) {
+      addMarkerStyleIntensities(intensity);
+      return;
+    }
+
+    addSymbolStyleIntensities(intensity);
+  });
+}
+
+function addMarkerStyleIntensities(
+  intensity: AllStationIntensities | AllAreaIntensities
+): void {
+  Object.values(intensity).forEach((content) => {
+    const longitude = Number(content.longitude);
+    const latitude = Number(content.latitude);
+    if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+      return;
+    }
+
+    const normalizedIntensity =
+      content.intensity !== null &&
+      intensityStore.intensityConversion[content.intensity] !== undefined
+        ? content.intensity
+        : "0";
+    const converted = intensityStore.intensityConversion[normalizedIntensity];
+    const markerElement = document.createElement("div");
+    markerElement.className = content.is_area
+      ? `intensity-big intensity-${converted.class}`
+      : `intensity-small intensity-${converted.class}`;
+    markerElement.innerHTML = converted.html;
+    markerElement.style.zIndex = converted.zIndex.toString();
+
+    if (content.is_area) {
+      applyLongPeriodWarning(markerElement, content.lg_intensity);
+    }
+
+    const marker = new maplibregl.Marker({
+      anchor: "center",
+      element: markerElement,
+    })
+      .setLngLat([longitude, latitude])
+      .setSubpixelPositioning(true)
+      .addTo(map.value!);
+    intensityMarkers.push(marker);
   });
 }
 
@@ -298,20 +350,324 @@ function applyLongPeriodWarning(
       "intensity-lg-blink",
       `intensity-lg-${parsedLgIntensity}`
     );
-    // element.insertAdjacentHTML(
-    //   "beforeend",
-    //   "<div class='intensity-add'>!</div>"
-    // );
     element.style.zIndex = (
       Number.parseInt(element.style.zIndex) + 50
     ).toString();
   } else if (parsedLgIntensity >= 1) {
     element.classList.add("intensity-lg", `intensity-lg-${parsedLgIntensity}`);
-    // element.insertAdjacentHTML(
-    //   "beforeend",
-    //   "<div class='intensity-add special-intensity-add'>~</div>"
-    // );
   }
+}
+
+function addSymbolStyleIntensities(
+  intensity: AllStationIntensities | AllAreaIntensities
+): void {
+  const features: Feature<Point, IntensityMarkerProperties>[] = [];
+
+  Object.values(intensity).forEach((content) => {
+    const longitude = Number(content.longitude);
+    const latitude = Number(content.latitude);
+    if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+      return;
+    }
+
+    const markerStyle = getIntensityMarkerStyle(
+      content.intensity,
+      content.is_area,
+      content.lg_intensity
+    );
+    ensureIntensityMarkerImage(markerStyle);
+
+    const coordinates: [number, number] = [longitude, latitude];
+    intensityMarkerCoordinates.push(coordinates);
+    features.push({
+      type: "Feature",
+      properties: {
+        image: markerStyle.imageId,
+        sortKey: markerStyle.sortKey,
+      },
+      geometry: {
+        type: "Point",
+        coordinates,
+      },
+    });
+  });
+
+  if (features.length === 0) {
+    return;
+  }
+
+  intensityMarkerData = {
+    type: "FeatureCollection",
+    features: [...intensityMarkerData.features, ...features],
+  };
+  getIntensityMarkerSource()?.setData(intensityMarkerData);
+  ensureIntensityMarkerLayer();
+}
+
+function emptyIntensityMarkerData(): FeatureCollection<
+  Point,
+  IntensityMarkerProperties
+> {
+  return {
+    type: "FeatureCollection",
+    features: [],
+  };
+}
+
+function clearIntensityMarkers(): void {
+  clearMarkers(intensityMarkers);
+  intensityMarkerData = emptyIntensityMarkerData();
+  intensityMarkerCoordinates.length = 0;
+  getIntensityMarkerSource()?.setData(intensityMarkerData);
+}
+
+function getIntensityMarkerSource(): maplibregl.GeoJSONSource | undefined {
+  return map.value?.getSource(intensityMarkerSourceId) as
+    | maplibregl.GeoJSONSource
+    | undefined;
+}
+
+function ensureIntensityMarkerLayer(): void {
+  if (map.value === undefined) {
+    return;
+  }
+
+  if (getIntensityMarkerSource() === undefined) {
+    map.value.addSource(intensityMarkerSourceId, {
+      type: "geojson",
+      data: intensityMarkerData,
+    });
+  }
+  if (map.value.getLayer(intensityMarkerLayerId) !== undefined) {
+    return;
+  }
+
+  map.value.addLayer({
+    id: intensityMarkerLayerId,
+    type: "symbol",
+    source: intensityMarkerSourceId,
+    layout: {
+      "icon-image": ["get", "image"],
+      "icon-size": mapElementScale.value,
+      "icon-padding": 1,
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true,
+      "icon-rotation-alignment": "viewport",
+      "icon-pitch-alignment": "viewport",
+      "symbol-sort-key": ["get", "sortKey"],
+      "symbol-z-order": "source",
+    },
+  });
+}
+
+function getIntensityMarkerStyle(
+  intensity: string | null,
+  isArea: boolean,
+  lgIntensity: string
+): IntensityMarkerStyle {
+  const normalizedIntensity =
+    intensity !== null &&
+    intensityStore.intensityConversion[intensity] !== undefined
+      ? intensity
+      : "0";
+  const converted = intensityStore.intensityConversion[normalizedIntensity];
+  const longPeriodIntensity = isArea
+    ? normalizeLongPeriodIntensity(lgIntensity)
+    : 0;
+  const cacheKey = `${isArea ? "area" : "station"}:${
+    converted.class
+  }:lg-${longPeriodIntensity}`;
+  const cachedStyle = intensityMarkerStyles.get(cacheKey);
+  if (cachedStyle !== undefined) {
+    return cachedStyle;
+  }
+
+  const labelParts = parseIntensityLabel(converted.html);
+  const style: IntensityMarkerStyle = {
+    imageId: `quake-intensity-${cacheKey.replace(/:/g, "-")}`,
+    isArea,
+    label: labelParts.label,
+    modifier: labelParts.modifier,
+    color:
+      intensityStore.intensityColors[normalizedIntensity] ??
+      intensityStore.intensityColors["0"],
+    textColor: usesDarkIntensityText(normalizedIntensity)
+      ? "#101416"
+      : "#ffffff",
+    longPeriodIntensity,
+    // With overlap enabled, higher sort keys render above lower sort keys.
+    sortKey: converted.zIndex + (longPeriodIntensity >= 3 ? 50 : 0),
+  };
+  intensityMarkerStyles.set(cacheKey, style);
+  return style;
+}
+
+function normalizeLongPeriodIntensity(value: string): number {
+  const parsed = Number.parseInt(value);
+  return Number.isNaN(parsed) || parsed < 1 ? 0 : Math.min(parsed, 4);
+}
+
+function parseIntensityLabel(html: string): {
+  label: string;
+  modifier: string;
+} {
+  const label = html.match(/^[^<]*/)?.[0] || "?";
+  const modifier =
+    html.match(/class=['"][^'"]*intensity-add[^'"]*['"][^>]*>([^<]*)</)?.[1] ??
+    "";
+  return { label, modifier };
+}
+
+function usesDarkIntensityText(intensity: string): boolean {
+  return ["3", "4", "5-", "5+", "5?"].includes(intensity);
+}
+
+function ensureIntensityMarkerImage(style: IntensityMarkerStyle): void {
+  if (map.value === undefined || map.value.hasImage(style.imageId)) {
+    return;
+  }
+  const image = renderIntensityMarkerImage(style);
+  map.value.addImage(style.imageId, image.data, {
+    pixelRatio: image.pixelRatio,
+  });
+}
+
+function renderIntensityMarkerImage(style: IntensityMarkerStyle): {
+  data: ImageData;
+  pixelRatio: number;
+} {
+  const markerSize = style.isArea ? 30 : 22;
+  const imagePadding = 5;
+  const logicalSize = markerSize + imagePadding * 2;
+  const pixelRatio = window.devicePixelRatio > 1 ? 2 : 1;
+  const canvas = document.createElement("canvas");
+  canvas.width = logicalSize * pixelRatio;
+  canvas.height = logicalSize * pixelRatio;
+  const context = canvas.getContext("2d");
+  if (context === null) {
+    throw new Error("Unable to render intensity marker image");
+  }
+  context.scale(pixelRatio, pixelRatio);
+
+  const rounded = style.isArea && style.longPeriodIntensity === 0;
+  drawIntensityMarkerPath(
+    context,
+    imagePadding,
+    imagePadding,
+    markerSize,
+    rounded
+  );
+  context.save();
+  context.fillStyle = style.color;
+  context.shadowColor = "rgba(0, 0, 0, 0.32)";
+  context.shadowBlur = 4;
+  context.shadowOffsetY = 2;
+  context.fill();
+  context.restore();
+
+  drawIntensityMarkerPath(
+    context,
+    imagePadding,
+    imagePadding,
+    markerSize,
+    rounded
+  );
+  context.strokeStyle = longPeriodBorderColor(style.longPeriodIntensity);
+  context.lineWidth = 2;
+  context.stroke();
+
+  drawIntensityMarkerText(
+    context,
+    style,
+    imagePadding + markerSize / 2,
+    imagePadding + markerSize / 2
+  );
+
+  return {
+    data: context.getImageData(0, 0, canvas.width, canvas.height),
+    pixelRatio,
+  };
+}
+
+function drawIntensityMarkerPath(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  rounded: boolean
+): void {
+  context.beginPath();
+  if (!rounded) {
+    context.arc(x + size / 2, y + size / 2, size / 2 - 1, 0, Math.PI * 2);
+    return;
+  }
+
+  const radius = 7;
+  context.moveTo(x + radius, y + 1);
+  context.lineTo(x + size - radius, y + 1);
+  context.quadraticCurveTo(x + size - 1, y + 1, x + size - 1, y + radius);
+  context.lineTo(x + size - 1, y + size - radius);
+  context.quadraticCurveTo(
+    x + size - 1,
+    y + size - 1,
+    x + size - radius,
+    y + size - 1
+  );
+  context.lineTo(x + radius, y + size - 1);
+  context.quadraticCurveTo(x + 1, y + size - 1, x + 1, y + size - radius);
+  context.lineTo(x + 1, y + radius);
+  context.quadraticCurveTo(x + 1, y + 1, x + radius, y + 1);
+  context.closePath();
+}
+
+function longPeriodBorderColor(intensity: number): string {
+  switch (intensity) {
+    case 1:
+      return "#94bdff";
+    case 2:
+      return "#d8d84c";
+    case 3:
+      return "#f6829d";
+    case 4:
+      return "#e59cff";
+    default:
+      return "rgba(255, 255, 255, 0.4)";
+  }
+}
+
+function drawIntensityMarkerText(
+  context: CanvasRenderingContext2D,
+  style: IntensityMarkerStyle,
+  centerX: number,
+  centerY: number
+): void {
+  const mainFontSize = style.isArea ? 19 : 14;
+  const modifierFontSize = 12;
+  context.fillStyle = style.textColor;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.font = `900 ${mainFontSize}px B612, sans-serif`;
+
+  if (style.modifier === "") {
+    context.fillText(style.label, centerX, centerY + 1);
+    return;
+  }
+
+  const labelWidth = context.measureText(style.label).width;
+  context.font = `900 ${modifierFontSize}px B612, sans-serif`;
+  const modifierWidth = context.measureText(style.modifier).width;
+  const combinedWidth = labelWidth + modifierWidth - 1;
+  const labelCenter = centerX - combinedWidth / 2 + labelWidth / 2;
+  const modifierCenter = centerX + combinedWidth / 2 - modifierWidth / 2 - 1;
+
+  context.font = `900 ${mainFontSize}px B612, sans-serif`;
+  context.fillText(style.label, labelCenter, centerY + 1);
+  context.font = `900 ${modifierFontSize}px B612, sans-serif`;
+  context.fillText(
+    style.modifier,
+    modifierCenter,
+    centerY - (style.isArea ? 4 : 3)
+  );
 }
 
 function addEpicenter(content: IHypocenter): void {
@@ -335,6 +691,7 @@ function addEpicenter(content: IHypocenter): void {
       element: epicenterElement,
     })
       .setLngLat([content.longitude, content.latitude])
+      .setSubpixelPositioning(true)
       .addTo(map.value!);
     epicenterMarkers.push(epicenterMarker);
   });
@@ -427,25 +784,35 @@ function addWaveCircle(
       type: "geojson",
       data: waveData,
     });
-    map.value!.addLayer({
-      id: `${sourceId}-fill`,
-      type: "fill",
-      source: sourceId,
-      paint: {
-        "fill-color": type === "s" ? "#e65a5a" : "#50a0fa",
-        "fill-opacity": type === "s" ? 0.18 : 0.05,
+    map.value!.addLayer(
+      {
+        id: `${sourceId}-fill`,
+        type: "fill",
+        source: sourceId,
+        paint: {
+          "fill-color": type === "s" ? "#e65a5a" : "#50a0fa",
+          "fill-opacity": type === "s" ? 0.18 : 0.05,
+        },
       },
-    });
-    map.value!.addLayer({
-      id: `${sourceId}-line`,
-      type: "line",
-      source: sourceId,
-      paint: {
-        "line-color": type === "s" ? "#ff7676" : "#73b7ff",
-        "line-opacity": 0.92,
-        "line-width": waveLineWidth(type),
+      map.value!.getLayer(intensityMarkerLayerId)
+        ? intensityMarkerLayerId
+        : undefined
+    );
+    map.value!.addLayer(
+      {
+        id: `${sourceId}-line`,
+        type: "line",
+        source: sourceId,
+        paint: {
+          "line-color": type === "s" ? "#ff7676" : "#73b7ff",
+          "line-opacity": 0.92,
+          "line-width": waveLineWidth(type),
+        },
       },
-    });
+      map.value!.getLayer(intensityMarkerLayerId)
+        ? intensityMarkerLayerId
+        : undefined
+    );
   });
 }
 
@@ -456,6 +823,13 @@ function waveLineWidth(type: string): number {
 function updateScaledPaintProperties(): void {
   setWaveLineWidth(sWaveSourceId, "s");
   setWaveLineWidth(pWaveSourceId, "p");
+  if (map.value?.getLayer(intensityMarkerLayerId) !== undefined) {
+    map.value.setLayoutProperty(
+      intensityMarkerLayerId,
+      "icon-size",
+      mapElementScale.value
+    );
+  }
 }
 
 function setWaveLineWidth(sourceId: string, type: string): void {
@@ -526,6 +900,9 @@ function parseColorStyle(feature?: IGeoJsonFeature): Record<string, unknown> {
 function parseMapScale(isEEW = false): void {
   runWhenReady(() => {
     const bounds = new maplibregl.LngLatBounds();
+    intensityMarkerCoordinates.forEach((coordinate) =>
+      bounds.extend(coordinate)
+    );
     extendBoundsWithMarkers(bounds, intensityMarkers);
     extendBoundsWithMarkers(bounds, epicenterMarkers);
     extendBoundsWithFeatureCollection(bounds, getAreaColoringData());
@@ -774,14 +1151,6 @@ defineExpose({
   backdrop-filter: blur(12px);
 }
 
-.epicenter-marker {
-  width: calc(42px * var(--quake-map-element-scale));
-  height: calc(42px * var(--quake-map-element-scale));
-  z-index: 100;
-  filter: drop-shadow(0 0 10px rgba(255, 238, 90, 0.52))
-    drop-shadow(0 10px 20px rgba(0, 0, 0, 0.38));
-}
-
 .intensity-add-icon {
   align-self: flex-end;
   font-size: 13px !important;
@@ -867,5 +1236,13 @@ defineExpose({
 
 .intensity-lg {
   border-radius: 100px !important;
+}
+
+.epicenter-marker {
+  width: calc(42px * var(--quake-map-element-scale));
+  height: calc(42px * var(--quake-map-element-scale));
+  z-index: 100;
+  filter: drop-shadow(0 0 10px rgba(255, 238, 90, 0.52))
+    drop-shadow(0 10px 20px rgba(0, 0, 0, 0.38));
 }
 </style>
