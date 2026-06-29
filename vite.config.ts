@@ -2,22 +2,21 @@ import { fileURLToPath, URL } from "node:url";
 
 import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
-import { sentryVitePlugin } from "@sentry/vite-plugin";
 
 const getPluginOptions = (mode: string, env: Record<string, string>) => {
   const pluginOptions = [vue()];
-  if (mode !== "development") {
-    pluginOptions.push(
-      sentryVitePlugin({
-        org: "homenetwork",
-        project: "quakemap-front",
-        include: "./dist",
-        url: "https://sentry.mightyhub.net/",
-        authToken: env.SENTRY_AUTH_TOKEN,
-        release: `quakemap-front@${process.env.npm_package_version}`,
-      })
-    );
-  }
+  // if (mode !== "development") {
+  //   pluginOptions.push(
+  //     sentryVitePlugin({
+  //       org: "homenetwork",
+  //       project: "quakemap-front",
+  //       include: "./dist",
+  //       url: "https://sentry.mightyhub.net/",
+  //       authToken: env.SENTRY_AUTH_TOKEN,
+  //       release: `quakemap-front@${process.env.npm_package_version}`,
+  //     })
+  //   );
+  // }
   return pluginOptions;
 };
 

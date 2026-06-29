@@ -1,20 +1,32 @@
 <template>
-  <div id="legends">
-    <div v-if="props.currentGrades.MajorWarning">
-      <span id="major-demo" class="legend-color">PURPLE</span>
-      <span class="legend-description">Major Tsunami Warning</span>
+  <div class="tsunami-grade-legend">
+    <div
+      v-if="props.currentGrades.MajorWarning"
+      class="tsunami-grade-item tsunami-grade-item-major"
+    >
+      <span class="tsunami-grade-swatch"></span>
+      <span>Major Warning</span>
     </div>
-    <div v-if="props.currentGrades.Warning">
-      <span id="warn-demo" class="legend-color">RED</span>
-      <span class="legend-description">Tsunami Warning</span>
+    <div
+      v-if="props.currentGrades.Warning"
+      class="tsunami-grade-item tsunami-grade-item-warning"
+    >
+      <span class="tsunami-grade-swatch"></span>
+      <span>Warning</span>
     </div>
-    <div v-if="props.currentGrades.Advisory">
-      <span id="adv-demo" class="legend-color">YELLOW</span>
-      <span class="legend-description">Tsunami Advisory</span>
+    <div
+      v-if="props.currentGrades.Advisory"
+      class="tsunami-grade-item tsunami-grade-item-advisory"
+    >
+      <span class="tsunami-grade-swatch"></span>
+      <span>Advisory</span>
     </div>
-    <div v-if="props.currentGrades.Forecast">
-      <span id="fc-demo" class="legend-color">BLUE</span>
-      <span class="legend-description">Tsunami Forecast</span>
+    <div
+      v-if="props.currentGrades.Forecast"
+      class="tsunami-grade-item tsunami-grade-item-forecast"
+    >
+      <span class="tsunami-grade-swatch"></span>
+      <span>Forecast</span>
     </div>
   </div>
 </template>
@@ -30,50 +42,58 @@ const props = defineProps<{
 <style lang="scss">
 @import "@/assets/colors.scss";
 
-#legends {
-  width: 275px;
-  height: fit-content;
-  position: absolute;
-  top: 350px;
-  left: 565px;
-  z-index: 9999;
-  background: rgba(29, 32, 37, 0.5);
+.tsunami-grade-legend {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
 }
 
-.legend-color {
-  width: 80px;
-  height: 30px;
-  margin: 3px;
-  font-weight: bolder;
-  text-align: center;
-  line-height: 30px;
+.tsunami-grade-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 11px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #f7fafc;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+
+  span:last-child {
+    white-space: normal;
+  }
 }
 
-#major-demo {
+.tsunami-grade-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.tsunami-grade-item-major .tsunami-grade-swatch {
   background: $map-major-tsunami-warn;
 }
 
-#warn-demo {
+.tsunami-grade-item-warning .tsunami-grade-swatch {
   background: $map-tsunami-warn;
 }
 
-#adv-demo {
+.tsunami-grade-item-advisory .tsunami-grade-swatch {
   background: $map-tsunami-advisory;
-  color: black;
 }
 
-#fc-demo {
+.tsunami-grade-item-forecast .tsunami-grade-swatch {
   background: $map-tsunami-forecast;
-  color: black;
 }
 
-#legends div {
-  display: flex;
-}
-
-.legend-description {
-  line-height: 36px;
-  text-align: center;
-  width: 195px;
+@media (max-width: 680px) {
+  .tsunami-grade-item {
+    min-height: 34px;
+    font-size: 13px;
+  }
 }
 </style>

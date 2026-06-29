@@ -1,11 +1,17 @@
 <template>
-  <div id="map" class="map sub-window"></div>
+  <div
+    ref="mapContainer"
+    :class="{ 'quake-maplibre--scaled': props.scaleElements }"
+    aria-label="Earthquake map"
+    class="quake-maplibre"
+  ></div>
 </template>
 
 <script lang="ts" setup>
-import type { PathOptions } from "leaflet";
-import L, { FeatureGroup, GeoJSON, Icon, Layer, Map } from "leaflet";
-import "leaflet.vectorgrid";
+import type { FeatureCollection, Geometry, Position } from "geojson";
+import type { ExpressionSpecification } from "@maplibre/maplibre-gl-style-spec";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import type { IHypocenter } from "@/interfaces/parsing/QuakeInfo";
 import type {
   AllAreaIntensities,
@@ -14,217 +20,384 @@ import type {
 import type { IAreaColor, IGeoJsonFeature } from "@/interfaces/parsing/GeoJson";
 import hnapi from "@/assets/hnapi";
 import { useGeoJsonStore } from "@/stores/geojson";
-import { useMapStore } from "@/stores/map";
-import { onMounted, ref, toRaw } from "vue";
+import { computed, onMounted, onUnmounted, ref, toRaw, watch } from "vue";
 import { useIntensityStore } from "@/stores/intensity";
 import epicenterSvg from "@/assets/epicenter.svg";
-import { parseInt } from "lodash";
 
 const geoJsonStore = useGeoJsonStore();
-const mapConfigStore = useMapStore();
 const intensityStore = useIntensityStore();
+const props = withDefaults(
+  defineProps<{
+    infoPanelOrientation?: "top" | "right" | "bottom" | "left";
+    scaleElements?: boolean;
+  }>(),
+  {
+    infoPanelOrientation: "bottom",
+    scaleElements: false,
+  }
+);
 
-const map = ref<Map>();
+const mapContainer = ref<HTMLDivElement>();
+const map = ref<maplibregl.Map>();
+const mapLoaded = ref(false);
+const pendingActions: Array<() => void> = [];
 
-const subAreaBorderLayer = ref<Layer>();
-const prefBorderLayer = ref<Layer>();
-
-const sWaveCircle = ref<Layer>();
-const pWaveCircle = ref<Layer>();
-
-const colorMapLayer = ref<GeoJSON>();
-const epicenterGroup = ref<FeatureGroup>(L.featureGroup());
-const iconGroup = ref<FeatureGroup>(L.featureGroup());
-const epicenterGroupAdded = ref(false);
-const iconGroupAdded = ref(false);
-const colorMapAdded = ref(false);
-
-epicenterGroup.value.on("layeradd", () => {
-  epicenterGroupAdded.value = true;
-});
-epicenterGroup.value.on("layerremove", () => {
-  epicenterGroupAdded.value = false;
-});
-iconGroup.value.on("layeradd", () => {
-  iconGroupAdded.value = true;
-});
-iconGroup.value.on("layerremove", () => {
-  iconGroupAdded.value = false;
+const areaColoring = ref<IAreaColor>({
+  colors: {},
+  areas: [],
 });
 
-const areaColoring = ref<IAreaColor>();
+const intensityMarkers: maplibregl.Marker[] = [];
+const epicenterMarkers: maplibregl.Marker[] = [];
 
-const epicenterIcon = new Icon({
-  iconUrl: epicenterSvg,
-  iconSize: [40, 40],
-});
+const areaColorSourceId = "quake-area-coloring";
+const areaColorLayerId = "quake-area-coloring-fill";
+const sWaveSourceId = "quake-s-wave";
+const pWaveSourceId = "quake-p-wave";
+const mapElementScale = computed(() => (props.scaleElements ? 1.5 : 1));
 
 onMounted(() => {
   initializeMap();
 });
 
+onUnmounted(() => {
+  deleteAllLayers();
+  map.value?.remove();
+  map.value = undefined;
+});
+
+watch(mapElementScale, () => {
+  runWhenReady(updateScaledPaintProperties);
+});
+
 function initializeMap(): void {
-  map.value = L.map("map", {
-    center: [38.272688535980976, 137],
+  if (mapContainer.value === undefined) {
+    return;
+  }
+
+  map.value = new maplibregl.Map({
+    container: mapContainer.value,
+    style: {
+      version: 8,
+      sources: {
+        countries: {
+          type: "geojson",
+          data: toRaw(geoJsonStore.countries!) as FeatureCollection,
+          attribution: "Natural Earth",
+        },
+        japan: {
+          type: "geojson",
+          data: toRaw(geoJsonStore.japan!) as FeatureCollection,
+          attribution: "JMA",
+        },
+        "japan-subareas": {
+          type: "geojson",
+          data: toRaw(geoJsonStore.japanWithSubAreas!) as FeatureCollection,
+          attribution: "JMA",
+        },
+      },
+      layers: [
+        {
+          id: "background",
+          type: "background",
+          paint: {
+            "background-color": "#182024",
+          },
+        },
+        {
+          id: "countries-fill",
+          type: "fill",
+          source: "countries",
+          paint: {
+            "fill-color": "#30383c",
+            "fill-opacity": 1,
+          },
+        },
+        {
+          id: "countries-lines",
+          type: "line",
+          source: "countries",
+          paint: {
+            "line-color": "#48545a",
+            "line-opacity": 0.72,
+            "line-width": 0.7,
+          },
+        },
+        {
+          id: "japan-fill",
+          type: "fill",
+          source: "japan",
+          paint: {
+            "fill-color": "#3f4b51",
+            "fill-opacity": 1,
+          },
+        },
+        {
+          id: "japan-subarea-lines",
+          type: "line",
+          source: "japan-subareas",
+          minzoom: 6,
+          paint: {
+            "line-color": "#66737a",
+            "line-opacity": 0.58,
+            "line-width": 0.55,
+          },
+        },
+        {
+          id: "japan-prefecture-lines",
+          type: "line",
+          source: "japan",
+          paint: {
+            "line-color": "#9aa8ad",
+            "line-opacity": 0.8,
+            "line-width": 0.75,
+          },
+        },
+      ],
+    },
+    center: [137, 38.272688535980976],
     zoom: 5,
-    ...mapConfigStore.mapOptions,
+    minZoom: 2,
+    maxZoom: 8,
+    attributionControl: false,
+    dragRotate: false,
+    pitchWithRotate: false,
   });
-  map.value?.attributionControl.setPrefix("QuakeMap by AllenDa");
-  map.value?.attributionControl.addAttribution(
-    "Map: Natural Earth | " + "Map Data: JMA"
+
+  map.value.addControl(
+    new maplibregl.NavigationControl({
+      showCompass: false,
+      visualizePitch: false,
+    }),
+    "top-right"
   );
-  // Background
-  L.vectorGrid
-    .slicer(toRaw(geoJsonStore.countries!), {
-      vectorTileLayerStyles: {
-        sliced: mapConfigStore.countriesBgStyle,
-      },
-    })
-    .addTo(map.value!);
-  L.vectorGrid
-    .slicer(toRaw(geoJsonStore.japan!), {
-      vectorTileLayerStyles: {
-        sliced: mapConfigStore.japanBgStyle,
-      },
-    })
-    .addTo(map.value!);
+  map.value.addControl(
+    new maplibregl.AttributionControl({
+      compact: true,
+      customAttribution: "QuakeMap by AllenDa | Map Data: JMA",
+    }),
+    "bottom-right"
+  );
 
-  // Borders
-  subAreaBorderLayer.value = L.vectorGrid
-    .slicer(toRaw(geoJsonStore.japanWithSubAreas!), {
-      vectorTileLayerStyles: {
-        sliced: mapConfigStore.japanAreaBorderStyle,
-      },
-    })
-    .addTo(map.value!);
-  prefBorderLayer.value = L.vectorGrid
-    .slicer(toRaw(geoJsonStore.japan!), {
-      vectorTileLayerStyles: {
-        sliced: mapConfigStore.japanBorderStyle,
-      },
-    })
-    .addTo(map.value!);
-
-  map.value!.on("zoomend", () => {
-    if (map.value!.getZoom() < 6) {
-      if (map.value!.hasLayer(subAreaBorderLayer.value!)) {
-        map.value!.removeLayer(subAreaBorderLayer.value!);
-      }
-    } else {
-      if (!map.value!.hasLayer(subAreaBorderLayer.value!)) {
-        map.value!.addLayer(subAreaBorderLayer.value!);
-      }
-    }
+  map.value.on("load", () => {
+    mapLoaded.value = true;
+    map.value?.resize();
+    runPendingActions();
   });
 }
 
-function deleteAllLayers(): void {
-  try {
-    if (colorMapLayer.value !== undefined && colorMapAdded.value) {
-      colorMapLayer.value!.removeFrom(map.value!);
-      colorMapAdded.value = false;
-    }
-    iconGroup.value!.clearLayers();
-    epicenterGroup.value!.clearLayers();
-    removeWaveCircle("s");
-    removeWaveCircle("p");
-  } catch (e) {
-    hnapi.error("Failed to remove layers:", e);
+function runWhenReady(action: () => void): void {
+  if (mapLoaded.value && map.value !== undefined) {
+    action();
+    return;
+  }
+  pendingActions.push(action);
+}
+
+function runPendingActions(): void {
+  while (pendingActions.length > 0) {
+    const action = pendingActions.shift();
+    action?.();
   }
 }
 
-function removeWaveCircle(circleType: string) {
-  if (circleType === "s") {
-    if (sWaveCircle.value !== undefined) {
-      map.value!.removeLayer(sWaveCircle.value);
+function deleteAllLayers(): void {
+  runWhenReady(() => {
+    removeAreaColoring();
+    clearMarkers(intensityMarkers);
+    clearMarkers(epicenterMarkers);
+    removeWaveCircle("s");
+    removeWaveCircle("p");
+  });
+}
+
+function clearMarkers(markers: maplibregl.Marker[]): void {
+  markers.splice(0).forEach((marker) => marker.remove());
+}
+
+function removeAreaColoring(): void {
+  if (map.value?.getLayer(areaColorLayerId) !== undefined) {
+    map.value.removeLayer(areaColorLayerId);
+  }
+  if (map.value?.getSource(areaColorSourceId) !== undefined) {
+    map.value.removeSource(areaColorSourceId);
+  }
+}
+
+function removeWaveCircle(circleType: string): void {
+  runWhenReady(() => {
+    if (circleType !== "s" && circleType !== "p") {
+      hnapi.error("Exhaustive handling of circleType");
+      return;
     }
-  } else if (circleType === "p") {
-    if (pWaveCircle.value !== undefined) {
-      map.value!.removeLayer(pWaveCircle.value);
-    }
-  } else {
-    hnapi.error("Exhaustive handling of circleType");
+    const sourceId = circleType === "s" ? sWaveSourceId : pWaveSourceId;
+    removeWaveLayer(sourceId);
+  });
+}
+
+function removeWaveLayer(sourceId: string): void {
+  const fillLayerId = `${sourceId}-fill`;
+  const lineLayerId = `${sourceId}-line`;
+  if (map.value?.getLayer(fillLayerId) !== undefined) {
+    map.value.removeLayer(fillLayerId);
+  }
+  if (map.value?.getLayer(lineLayerId) !== undefined) {
+    map.value.removeLayer(lineLayerId);
+  }
+  if (map.value?.getSource(sourceId) !== undefined) {
+    map.value.removeSource(sourceId);
   }
 }
 
 function addMapIntensities(
   intensity: AllStationIntensities | AllAreaIntensities
 ): void {
-  for (const i in intensity) {
-    const content = intensity[i];
-    if (content.intensity === null) {
-      content.intensity = "0";
-    }
-    const intensityConverted =
-      intensityStore.intensityConversion[content.intensity];
-    if (content.is_area) {
-      let addLgWarningSign = "",
-        addLgIndex = 0,
-        addLgClass = "";
-      if (parseInt(content.lg_intensity) >= 3) {
-        addLgWarningSign = "<div class='intensity-add'>!</div>";
-        addLgIndex = 50;
-        addLgClass = `intensity-lg-blink intensity-lg-${content.lg_intensity}`;
-      } else if (
-        parseInt(content.lg_intensity) >= 1 &&
-        parseInt(content.intensity) < 3
-      ) {
-        addLgWarningSign = "<div class='intensity-add'>△</div>";
+  runWhenReady(() => {
+    for (const i in intensity) {
+      const content = intensity[i];
+      if (content.intensity === null) {
+        content.intensity = "0";
       }
-      const layer = L.marker([content.latitude, content.longitude], {
-        zIndexOffset: intensityConverted.zIndex + addLgIndex,
-        icon: L.divIcon({
-          className: `intensity-big intensity-${intensityConverted.class} ${addLgClass}`,
-          html: intensityConverted.html + addLgWarningSign,
-        }),
-      });
-      iconGroup.value!.addLayer(layer);
-    } else {
-      const layer = L.marker([content.latitude, content.longitude], {
-        zIndexOffset: intensityConverted.zIndex,
-        icon: L.divIcon({
-          className: `intensity-small intensity-${intensityConverted.class}`,
-          html: intensityConverted.html,
-        }),
-      });
-      iconGroup.value!.addLayer(layer);
+      const intensityConverted =
+        intensityStore.intensityConversion[content.intensity] ??
+        intensityStore.intensityConversion["0"];
+      const markerElement = document.createElement("div");
+      markerElement.className = content.is_area
+        ? `intensity-big intensity-${intensityConverted.class}`
+        : `intensity-small intensity-${intensityConverted.class}`;
+      markerElement.innerHTML = intensityConverted.html;
+      markerElement.style.zIndex = intensityConverted.zIndex.toString();
+
+      if (content.is_area) {
+        applyLongPeriodWarning(markerElement, content.lg_intensity);
+      }
+
+      const marker = new maplibregl.Marker({
+        anchor: "center",
+        element: markerElement,
+      })
+        .setLngLat([content.longitude, content.latitude])
+        .addTo(map.value!);
+      intensityMarkers.push(marker);
     }
+  });
+}
+
+function applyLongPeriodWarning(
+  element: HTMLElement,
+  lgIntensity: string
+): void {
+  const parsedLgIntensity = Number.parseInt(lgIntensity);
+  if (Number.isNaN(parsedLgIntensity)) {
+    return;
   }
-  iconGroup.value!.addTo(map.value!);
+
+  if (parsedLgIntensity >= 3) {
+    element.classList.add(
+      "intensity-lg",
+      "intensity-lg-blink",
+      `intensity-lg-${parsedLgIntensity}`
+    );
+    // element.insertAdjacentHTML(
+    //   "beforeend",
+    //   "<div class='intensity-add'>!</div>"
+    // );
+    element.style.zIndex = (
+      Number.parseInt(element.style.zIndex) + 50
+    ).toString();
+  } else if (parsedLgIntensity >= 1) {
+    element.classList.add("intensity-lg", `intensity-lg-${parsedLgIntensity}`);
+    // element.insertAdjacentHTML(
+    //   "beforeend",
+    //   "<div class='intensity-add special-intensity-add'>~</div>"
+    // );
+  }
 }
 
 function addEpicenter(content: IHypocenter): void {
-  if (
-    content.depth === "-1km" &&
-    content.latitude === -200 &&
-    content.latitude === -200
-  ) {
-    // Probably unknown hypocenter
-    return;
-  }
-  const epicenterMarker = L.marker([content.latitude, content.longitude], {
-    icon: epicenterIcon,
+  runWhenReady(() => {
+    if (
+      content.depth === "-1km" &&
+      content.latitude === -200 &&
+      content.longitude === -200
+    ) {
+      return;
+    }
+
+    const epicenterElement = document.createElement("img");
+    epicenterElement.src = epicenterSvg;
+    epicenterElement.alt = "Epicenter";
+    epicenterElement.className = "epicenter-marker";
+    // epicenterElement.style.zIndex = "1000000";
+
+    const epicenterMarker = new maplibregl.Marker({
+      anchor: "center",
+      element: epicenterElement,
+    })
+      .setLngLat([content.longitude, content.latitude])
+      .addTo(map.value!);
+    epicenterMarkers.push(epicenterMarker);
   });
-  epicenterMarker.setZIndexOffset(5000000);
-  epicenterGroup.value!.addLayer(epicenterMarker);
-  epicenterGroup.value!.removeFrom(map.value!);
-  epicenterGroup.value!.addTo(map.value!);
 }
 
 function addMapColoring(intensity: AllAreaIntensities): void {
-  areaIntensityToColor(intensity);
-  colorMapLayer.value = L.geoJson(toRaw(geoJsonStore.japanWithSubAreas), {
-    style: parseColorStyle,
-    filter: filterMapColoring,
-    pane: "tilePane",
+  runWhenReady(() => {
+    areaIntensityToColor(intensity);
+    removeAreaColoring();
+
+    const data = filterFeatureCollection(
+      toRaw(geoJsonStore.japanWithSubAreas!) as FeatureCollection,
+      areaColoring.value.areas
+    );
+    map.value!.addSource(areaColorSourceId, {
+      type: "geojson",
+      data,
+    });
+    map.value!.addLayer(
+      {
+        id: areaColorLayerId,
+        type: "fill",
+        source: areaColorSourceId,
+        paint: {
+          "fill-color": buildAreaColorExpression(),
+          "fill-opacity": 0.9,
+          "fill-outline-color": "rgba(10, 14, 16, 0.78)",
+        },
+      },
+      "japan-subarea-lines"
+    );
   });
-  colorMapLayer.value!.addTo(map.value!);
-  colorMapAdded.value = true;
+}
+
+function filterFeatureCollection(
+  collection: FeatureCollection,
+  allowedAreas: string[]
+): FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: collection.features.filter((feature) =>
+      allowedAreas.includes(String(feature.properties?.name))
+    ),
+  };
+}
+
+function buildAreaColorExpression(): ExpressionSpecification {
+  const expression: unknown[] = ["match", ["get", "name"]];
+  Object.entries(areaColoring.value.colors).forEach(([area, color]) => {
+    expression.push(area, color);
+  });
+  expression.push("#666666");
+  return expression as ExpressionSpecification;
 }
 
 function setForeignEarthquake(epicenter: IHypocenter): void {
-  map.value!.panTo([epicenter.latitude, epicenter.longitude]);
-  map.value!.setZoom(2);
+  runWhenReady(() => {
+    map.value!.easeTo({
+      center: [epicenter.longitude, epicenter.latitude],
+      zoom: 2,
+      duration: 700,
+    });
+  });
 }
 
 function addWaveCircle(
@@ -232,32 +405,108 @@ function addWaveCircle(
   waveDistance: number,
   type: string
 ): void {
-  if (type === "s") {
-    if (sWaveCircle.value !== undefined) {
-      map.value!.removeLayer(sWaveCircle.value);
+  runWhenReady(() => {
+    if (type !== "s" && type !== "p") {
+      throw new Error("Exhaustive wave circle handling");
     }
-    sWaveCircle.value = L.circle(
-      [epicenter.latitude, epicenter.longitude],
-      waveDistance * 1000,
-      toRaw(mapConfigStore.sWaveCircleStyle)
+
+    const sourceId = type === "s" ? sWaveSourceId : pWaveSourceId;
+    const waveData = buildCircleFeature(
+      [epicenter.longitude, epicenter.latitude],
+      waveDistance
     );
-    sWaveCircle.value!.addTo(map.value!);
-  } else if (type === "p") {
-    if (pWaveCircle.value !== undefined) {
-      map.value!.removeLayer(pWaveCircle.value);
+    const source = map.value!.getSource(sourceId) as
+      | maplibregl.GeoJSONSource
+      | undefined;
+    if (source !== undefined) {
+      source.setData(waveData);
+      return;
     }
-    pWaveCircle.value = L.circle(
-      [epicenter.latitude, epicenter.longitude],
-      waveDistance * 1000,
-      toRaw(mapConfigStore.pWaveCircleStyle)
-    );
-    pWaveCircle.value!.addTo(map.value!);
-  } else {
-    throw new Error("Exhaustive wave circle handling");
+
+    map.value!.addSource(sourceId, {
+      type: "geojson",
+      data: waveData,
+    });
+    map.value!.addLayer({
+      id: `${sourceId}-fill`,
+      type: "fill",
+      source: sourceId,
+      paint: {
+        "fill-color": type === "s" ? "#e65a5a" : "#50a0fa",
+        "fill-opacity": type === "s" ? 0.18 : 0.05,
+      },
+    });
+    map.value!.addLayer({
+      id: `${sourceId}-line`,
+      type: "line",
+      source: sourceId,
+      paint: {
+        "line-color": type === "s" ? "#ff7676" : "#73b7ff",
+        "line-opacity": 0.92,
+        "line-width": waveLineWidth(type),
+      },
+    });
+  });
+}
+
+function waveLineWidth(type: string): number {
+  return (type === "s" ? 2.4 : 2) * mapElementScale.value;
+}
+
+function updateScaledPaintProperties(): void {
+  setWaveLineWidth(sWaveSourceId, "s");
+  setWaveLineWidth(pWaveSourceId, "p");
+}
+
+function setWaveLineWidth(sourceId: string, type: string): void {
+  const layerId = `${sourceId}-line`;
+  if (map.value?.getLayer(layerId) !== undefined) {
+    map.value.setPaintProperty(layerId, "line-width", waveLineWidth(type));
   }
 }
 
-function parseColorStyle(feature?: IGeoJsonFeature): PathOptions {
+function buildCircleFeature(
+  center: [number, number],
+  radiusKm: number
+): FeatureCollection {
+  const coordinates: Position[] = [];
+  const earthRadiusKm = 6371;
+  const [centerLng, centerLat] = center;
+  const latRad = degreesToRadians(centerLat);
+  const lngRad = degreesToRadians(centerLng);
+  const angularDistance = radiusKm / earthRadiusKm;
+
+  for (let i = 0; i <= 160; i += 1) {
+    const bearing = degreesToRadians((i / 160) * 360);
+    const lat = Math.asin(
+      Math.sin(latRad) * Math.cos(angularDistance) +
+        Math.cos(latRad) * Math.sin(angularDistance) * Math.cos(bearing)
+    );
+    const lng =
+      lngRad +
+      Math.atan2(
+        Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latRad),
+        Math.cos(angularDistance) - Math.sin(latRad) * Math.sin(lat)
+      );
+    coordinates.push([radiansToDegrees(lng), radiansToDegrees(lat)]);
+  }
+
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "Polygon",
+          coordinates: [coordinates],
+        },
+      },
+    ],
+  };
+}
+
+function parseColorStyle(feature?: IGeoJsonFeature): Record<string, unknown> {
   if (feature === undefined) {
     hnapi.warn("Feature is none.");
     return {
@@ -266,63 +515,199 @@ function parseColorStyle(feature?: IGeoJsonFeature): PathOptions {
     };
   }
   return {
-    fillColor: areaColoring.value!.colors[feature.properties!.name],
-    fillOpacity: 1.0,
+    fillColor: areaColoring.value.colors[feature.properties.name],
+    fillOpacity: 0.9,
     stroke: true,
-    color: "#000000",
+    color: "#0a0e10",
     weight: 2,
   };
 }
 
 function parseMapScale(isEEW = false): void {
-  let currentBounds = L.latLngBounds([]);
-  try {
-    if (iconGroupAdded.value) {
-      currentBounds.extend(iconGroup.value!.getBounds());
+  runWhenReady(() => {
+    const bounds = new maplibregl.LngLatBounds();
+    extendBoundsWithMarkers(bounds, intensityMarkers);
+    extendBoundsWithMarkers(bounds, epicenterMarkers);
+    extendBoundsWithFeatureCollection(bounds, getAreaColoringData());
+
+    if (bounds.isEmpty()) {
+      map.value!.easeTo({
+        center: [137, 38.272688535980976],
+        zoom: 5,
+        duration: 600,
+      });
+      return;
     }
-  } catch (e) {
-    hnapi.error("Failed to parse iconGroup bounds:", e);
-  }
-  try {
-    if (colorMapAdded.value) {
-      currentBounds.extend(colorMapLayer.value!.getBounds());
-    }
-  } catch (e) {
-    hnapi.error("Failed to parse colorMap bounds:", e);
-  }
-  try {
-    if (epicenterGroupAdded.value) {
-      currentBounds.extend(epicenterGroup.value!.getBounds());
-    }
-  } catch (e) {
-    hnapi.error("Failed to parse epicenterGroup bounds:", e);
-  }
-  try {
-    if (isEEW) {
-      currentBounds = currentBounds.pad(-0.95);
-    }
-  } catch (e) {
-    hnapi.error("Failed to pad bounds:", e);
-  }
-  map.value!.fitBounds(currentBounds, {
-    padding: [0, 30],
+
+    map.value!.fitBounds(bounds, {
+      padding: buildFitBoundsPadding(isEEW),
+      maxZoom: isEEW ? 7.4 : 7.1,
+      duration: 700,
+    });
   });
 }
 
-function areaIntensityToColor(intensity: AllAreaIntensities) {
+type FitBoundsPadding = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
+function buildFitBoundsPadding(isEEW: boolean): FitBoundsPadding {
+  const base = baseFitBoundsPadding(isEEW);
+  const container = map.value?.getContainer();
+  const width = container?.clientWidth ?? window.innerWidth;
+  const height = container?.clientHeight ?? window.innerHeight;
+  return constrainFitBoundsPadding(base, width, height);
+}
+
+function baseFitBoundsPadding(isEEW: boolean): FitBoundsPadding {
+  const panelScale = props.scaleElements ? 1.5 : 1;
+  const horizontalSidePadding = isEEW ? 80 : 90;
+  const verticalInsetPadding = 110;
+  const horizontalPanelPadding = 390 * panelScale;
+  const verticalPanelPadding = (isEEW ? 300 : 310) * panelScale;
+
+  switch (props.infoPanelOrientation) {
+    case "top":
+      return {
+        top: verticalPanelPadding,
+        right: 0,
+        bottom: verticalInsetPadding,
+        left: 0,
+      };
+    case "left":
+      return {
+        top: 0,
+        right: horizontalSidePadding,
+        bottom: 0,
+        left: horizontalPanelPadding,
+      };
+    case "right":
+      return {
+        top: 0,
+        right: horizontalPanelPadding,
+        bottom: 0,
+        left: horizontalSidePadding,
+      };
+    case "bottom":
+    default:
+      return {
+        top: verticalInsetPadding,
+        right: 0,
+        bottom: verticalPanelPadding,
+        left: 0,
+      };
+  }
+}
+
+function constrainFitBoundsPadding(
+  padding: FitBoundsPadding,
+  viewportWidth: number,
+  viewportHeight: number
+): FitBoundsPadding {
+  const maxVerticalPadding = Math.max(0, viewportHeight * 0.48);
+  const maxHorizontalPadding = Math.max(0, viewportWidth * 0.5);
+  const [top, bottom] = scalePaddingPair(
+    padding.top,
+    padding.bottom,
+    maxVerticalPadding
+  );
+  const [left, right] = scalePaddingPair(
+    padding.left,
+    padding.right,
+    maxHorizontalPadding
+  );
+  return { top, right, bottom, left };
+}
+
+function scalePaddingPair(
+  primary: number,
+  secondary: number,
+  maxTotal: number
+): [number, number] {
+  const total = primary + secondary;
+  if (total <= maxTotal || total === 0) {
+    return [Math.round(primary), Math.round(secondary)];
+  }
+  const scale = maxTotal / total;
+  return [Math.round(primary * scale), Math.round(secondary * scale)];
+}
+
+function extendBoundsWithMarkers(
+  bounds: maplibregl.LngLatBounds,
+  markers: maplibregl.Marker[]
+): void {
+  markers.forEach((marker) => bounds.extend(marker.getLngLat()));
+}
+
+function getAreaColoringData(): FeatureCollection | undefined {
+  const source = map.value?.getSource(areaColorSourceId) as
+    | maplibregl.GeoJSONSource
+    | undefined;
+  return source !== undefined
+    ? filterFeatureCollection(
+        toRaw(geoJsonStore.japanWithSubAreas!) as FeatureCollection,
+        areaColoring.value.areas
+      )
+    : undefined;
+}
+
+function extendBoundsWithFeatureCollection(
+  bounds: maplibregl.LngLatBounds,
+  collection?: FeatureCollection
+): void {
+  collection?.features.forEach((feature) => {
+    collectCoordinates(feature.geometry).forEach((coordinate) => {
+      bounds.extend([coordinate[0], coordinate[1]]);
+    });
+  });
+}
+
+function collectCoordinates(geometry: Geometry | null): Position[] {
+  if (geometry === null) {
+    return [];
+  }
+  if (geometry.type === "GeometryCollection") {
+    return geometry.geometries.flatMap((entry) => collectCoordinates(entry));
+  }
+  return flattenPositions(geometry.coordinates);
+}
+
+function flattenPositions(value: unknown): Position[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  if (typeof value[0] === "number") {
+    return [value as Position];
+  }
+  return value.flatMap((entry) => flattenPositions(entry));
+}
+
+function areaIntensityToColor(intensity: AllAreaIntensities): void {
   areaColoring.value = {
     colors: {},
     areas: [],
   };
   for (const i in intensity) {
-    areaColoring.value.colors[i] =
-      intensityStore.intensityColors[intensity[i].intensity];
+    const color =
+      intensityStore.intensityColors[intensity[i].intensity] ?? "#666666";
+    areaColoring.value.colors[i] = color;
     areaColoring.value.areas.push(i);
   }
 }
 
 function filterMapColoring(feature: IGeoJsonFeature): boolean {
-  return areaColoring.value!.areas.indexOf(feature.properties.name) !== -1;
+  return areaColoring.value.areas.indexOf(feature.properties.name) !== -1;
+}
+
+function degreesToRadians(value: number): number {
+  return (value * Math.PI) / 180;
+}
+
+function radiansToDegrees(value: number): number {
+  return (value * 180) / Math.PI;
 }
 
 defineExpose({
@@ -335,18 +720,66 @@ defineExpose({
   parseColorStyle,
   parseMapScale,
   removeWaveCircle,
+  filterMapColoring,
 });
 </script>
 
 <style lang="scss">
-@import "leaflet/dist/leaflet.css";
+@import "@/assets/generic.scss";
 
-$map-background-color: #1d1d1d;
+.quake-maplibre {
+  --quake-map-element-scale: 1;
 
-.map {
-  width: 100% !important;
-  height: 450px !important;
-  background: $map-background-color;
+  width: 100%;
+  height: 100%;
+  background: #182024;
+}
+
+.quake-maplibre--scaled {
+  --quake-map-element-scale: 1.5;
+}
+
+.quake-maplibre .maplibregl-ctrl-bottom-right {
+  right: 18px;
+  bottom: 18px;
+}
+
+.quake-maplibre .maplibregl-ctrl-group {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(13, 19, 22, 0.76);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(12px);
+}
+
+.quake-maplibre .maplibregl-ctrl button {
+  width: 36px;
+  height: 36px;
+  background-color: transparent;
+}
+
+.quake-maplibre .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(1.35);
+}
+
+.quake-maplibre .maplibregl-ctrl button + button {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+.quake-maplibre .maplibregl-ctrl-attrib {
+  border-radius: 6px;
+  background: rgba(13, 19, 22, 0.66);
+  color: #d8e2ea;
+  backdrop-filter: blur(12px);
+}
+
+.epicenter-marker {
+  width: calc(42px * var(--quake-map-element-scale));
+  height: calc(42px * var(--quake-map-element-scale));
+  z-index: 100;
+  filter: drop-shadow(0 0 10px rgba(255, 238, 90, 0.52))
+    drop-shadow(0 10px 20px rgba(0, 0, 0, 0.38));
 }
 
 .intensity-add-icon {
@@ -355,64 +788,84 @@ $map-background-color: #1d1d1d;
   position: initial !important;
 }
 
-.intensity-big {
-  width: 25px !important;
-  height: 25px !important;
+.intensity-big,
+.intensity-small {
   display: flex !important;
-  box-sizing: border-box;
-  font-weight: bold;
-  font-size: 19px !important;
-  font-family: "B612", sans-serif;
   justify-content: center;
-  line-height: 29px;
+  box-sizing: border-box;
+  border: calc(2px * var(--quake-map-element-scale)) solid
+    rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
+  font-family: B612, sans-serif;
+  font-weight: 900;
+}
+
+.intensity-big {
+  width: calc(30px * var(--quake-map-element-scale)) !important;
+  height: calc(30px * var(--quake-map-element-scale)) !important;
+  border-radius: calc(7px * var(--quake-map-element-scale));
+  font-size: calc(19px * var(--quake-map-element-scale)) !important;
+  align-items: flex-end;
+
+  .intensity-add {
+    margin-left: calc(-1px * var(--quake-map-element-scale));
+    transform: translate(calc(-1px * var(--quake-map-element-scale)), -0.4em);
+  }
+}
+
+.quake-maplibre--scaled {
+  .intensity-small {
+    align-items: center;
+  }
 }
 
 .intensity-small {
-  width: 20px !important;
-  height: 20px !important;
-  display: flex !important;
-  box-sizing: border-box;
+  width: calc(22px * var(--quake-map-element-scale)) !important;
+  height: calc(22px * var(--quake-map-element-scale)) !important;
   border-radius: 50%;
-  font-weight: bold;
-  font-size: 14px !important;
-  font-family: "B612", sans-serif;
-  justify-content: center;
-  line-height: 24px;
+  font-size: calc(14px * var(--quake-map-element-scale)) !important;
+
+  .intensity-add {
+    margin-left: calc(-1px * var(--quake-map-element-scale));
+    transform: translate(calc(-1px * var(--quake-map-element-scale)), -0.1em);
+  }
 }
 
 .intensity-add {
   align-self: flex-end;
-  font-size: 13px;
-}
-
-.special-intensity-add {
-  font-size: 12px;
+  margin-left: 0;
+  font-size: calc(14px * var(--quake-map-element-scale));
+  transform: translateY(-1.7em);
 }
 
 @keyframes blink {
   50% {
-    border-color: unset;
+    border-color: rgba(255, 255, 255, 0.24);
+    box-shadow: 0 0 18px currentColor;
   }
 }
 
 .intensity-lg-blink {
-  animation: blink 1s;
-  animation-iteration-count: infinite;
+  animation: blink 1s infinite;
 }
 
 .intensity-lg-1 {
-  border: 1px solid #94bdff;
+  border-color: #94bdff;
 }
 
 .intensity-lg-2 {
-  border: 1px solid #737300;
+  border-color: #d8d84c;
 }
 
 .intensity-lg-3 {
-  border: 1px solid #f6829d;
+  border-color: #f6829d;
 }
 
 .intensity-lg-4 {
-  border: 1px solid #e59cff;
+  border-color: #e59cff;
+}
+
+.intensity-lg {
+  border-radius: 100px !important;
 }
 </style>

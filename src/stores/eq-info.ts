@@ -39,11 +39,11 @@ export const useEqInfoStore = defineStore("eqInfo", {
         className: "info-background",
       },
       Warning: {
-        text: "Japan: Major Tsunami Warning / Tsunami Warning / Advisory In Effect",
+        text: "Tsunami Warnings In Effect",
         className: "intensity-7",
       },
       None: {
-        text: "Japan: No Tsunami Expected",
+        text: "No Tsunami Expected",
         className: "no-tsunami",
       },
       EEWCancelled: {
@@ -51,11 +51,11 @@ export const useEqInfoStore = defineStore("eqInfo", {
         className: "no-tsunami",
       },
       NonEffective: {
-        text: "Japan: Light Sea Level Changes Expected - No Tsunami Expected",
+        text: "Slight Sea-Level Changes Expected",
         className: "intensity-4",
       },
       Checking: {
-        text: "Japan: Tsunami Risk Evaluating - Stay away from coastal areas",
+        text: "Tsunami Risk Evaluating",
         className: "risk-evaluating",
       },
     },

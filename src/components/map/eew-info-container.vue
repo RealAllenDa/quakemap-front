@@ -5,11 +5,11 @@
       class="drill-flag"
       message="Drill - Not Real Situation"
     ></eew-flag>
-    <eew-flag
-      :display="store.eewIsExpected"
-      class="expected-flag"
-      message="Expected Intensity"
-    ></eew-flag>
+    <!--    <eew-flag-->
+    <!--      :display="store.eewIsExpected"-->
+    <!--      class="expected-flag"-->
+    <!--      message="Expected Intensity"-->
+    <!--    ></eew-flag>-->
     <eew-banner class="sub-window"></eew-banner>
     <eew-info></eew-info>
     <div class="eew-earthquake sub-window">
@@ -41,17 +41,21 @@ const eqStore = useEqInfoStore();
 @import "@/assets/colors.scss";
 
 .eew-display {
+  position: relative;
+  overflow: hidden;
+  background: rgba(17, 24, 28, 0.82);
   grid-template-rows:
     [eewtype] 45px
     [eewadvice] 40px
-    [eewinfo] 140px;
+    [eewinfo] 200px;
 }
 
 .drill-flag {
   z-index: 10000;
   background: $intensity-3;
   color: black;
-  left: 490px;
+  left: auto;
+  right: 10px;
 }
 
 .expected-flag {
@@ -63,17 +67,17 @@ const eqStore = useEqInfoStore();
   width: 100%;
   display: flex;
   flex-wrap: nowrap;
+  background: rgba(17, 24, 28, 0.82);
 }
 
 .eew-earthquake-info {
-  width: 475px;
+  width: calc(100% - 275px);
   height: 100%;
-  border: 4px solid $border-color;
-  background: $info-background-color;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(17, 24, 28, 0.72);
 
   div {
     display: flex;
-    margin-top: 5px;
     box-sizing: border-box;
     overflow: hidden;
   }

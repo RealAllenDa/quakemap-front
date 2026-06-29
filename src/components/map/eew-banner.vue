@@ -14,13 +14,24 @@ const store = useEEWInfoStore();
 @import "@/assets/colors.scss";
 
 .eew-banner {
-  background: $info-background-color;
-  border: 4px solid $border-color;
-  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 16px;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(17, 24, 28, 0.82);
+  font-size: 18px;
   text-align: center;
   overflow: hidden;
-  line-height: 40px;
   font-weight: bolder;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .deep-earthquake {

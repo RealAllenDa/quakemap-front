@@ -1,14 +1,33 @@
 <template>
-  <div id="main-container">
-    <eq-info-container v-if="!eewStore.showEew"></eq-info-container>
-    <quake-map v-if="mapReady" ref="quakeMapInstance"></quake-map>
-    <eew-info-container v-if="eewStore.showEew"></eew-info-container>
-  </div>
+  <main
+    id="main-container"
+    :class="{ 'earthquake-map-page--eew': eewStore.showEew }"
+    class="earthquake-map-page"
+  >
+    <quake-map
+      v-if="mapReady"
+      ref="quakeMapInstance"
+      :info-panel-orientation="infoPanelOrientation"
+      :scale-elements="scaleInfoPanel"
+      class="earthquake-map-canvas"
+    ></quake-map>
+    <div v-else class="earthquake-map-loading">Loading earthquake map</div>
+
+    <aside
+      :class="earthquakeInfoPanelClasses"
+      aria-label="Earthquake information"
+      class="earthquake-info-panel"
+    >
+      <eq-info-container v-if="!eewStore.showEew"></eq-info-container>
+      <eew-info-container v-else></eew-info-container>
+    </aside>
+  </main>
 </template>
 
 <script lang="ts" setup>
 import type { Ref } from "vue";
-import { nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { useRoute } from "vue-router";
 import hnapi from "@/assets/hnapi";
 import EqInfoContainer from "@/components/map/eq-info-container.vue";
 import type {
@@ -60,6 +79,45 @@ const startSyncTime = ref(0);
 const quakeMapInstance = ref<InstanceType<typeof QuakeMap>>();
 const eqStore = useEqInfoStore();
 const eewStore = useEEWInfoStore();
+const route = useRoute();
+
+const scaleInfoPanel = computed(() => {
+  const scale = route.query.scale;
+  return Array.isArray(scale) ? scale.includes("true") : scale === "true";
+});
+
+type InfoPanelOrientation = "top" | "right" | "bottom" | "left";
+
+function isInfoPanelOrientation(value: unknown): value is InfoPanelOrientation {
+  return (
+    value === "top" ||
+    value === "right" ||
+    value === "bottom" ||
+    value === "left"
+  );
+}
+
+const infoPanelOrientation = computed<InfoPanelOrientation>(() => {
+  const orientation = route.query.orientation;
+  if (Array.isArray(orientation)) {
+    return orientation.find(isInfoPanelOrientation) ?? "bottom";
+  }
+  return isInfoPanelOrientation(orientation) ? orientation : "bottom";
+});
+
+const isVerticalInfoPanel = computed(
+  () =>
+    infoPanelOrientation.value === "left" ||
+    infoPanelOrientation.value === "right"
+);
+
+const earthquakeInfoPanelClasses = computed(() => [
+  `earthquake-info-panel--${infoPanelOrientation.value}`,
+  {
+    "earthquake-info-panel--scaled": scaleInfoPanel.value,
+    "earthquake-info-panel--vertical": isVerticalInfoPanel.value,
+  },
+]);
 
 async function calibrateTime() {
   const startTs = Date.now();
@@ -512,9 +570,11 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss">
+@import "@/assets/colors.scss";
+
 #main-container {
-  width: 750px;
-  height: 675px;
+  width: 100vw;
+  height: 100vh;
 }
 
 .window {
@@ -541,5 +601,374 @@ onUnmounted(() => {
   font-size: 23px;
   font-weight: bold;
   margin-left: 23px;
+}
+
+.earthquake-map-page {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #181d20;
+}
+
+.earthquake-map-page::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(
+      180deg,
+      rgba(8, 13, 16, 0.62) 0,
+      rgba(8, 13, 16, 0.18) 34%,
+      rgba(8, 13, 16, 0) 58%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(8, 13, 16, 0.52) 0,
+      rgba(8, 13, 16, 0.16) 30%,
+      rgba(8, 13, 16, 0) 62%
+    );
+}
+
+.earthquake-map-page--eew::after {
+  background: linear-gradient(
+      180deg,
+      rgba(60, 11, 18, 0.56) 0,
+      rgba(8, 13, 16, 0.16) 42%,
+      rgba(8, 13, 16, 0) 64%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(60, 11, 18, 0.44) 0,
+      rgba(8, 13, 16, 0.16) 36%,
+      rgba(8, 13, 16, 0) 64%
+    );
+}
+
+.earthquake-map-page .earthquake-map-canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.earthquake-info-panel {
+  --earthquake-info-panel-scale: 1;
+
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  z-index: 999999999;
+  width: min(920px, calc(100vw - 44px));
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  background: linear-gradient(
+      180deg,
+      rgba(24, 35, 40, 0.86),
+      rgba(11, 16, 19, 0.78)
+    ),
+    rgba(13, 19, 22, 0.72);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+  transform: translateX(-50%) scale(var(--earthquake-info-panel-scale));
+  transform-origin: bottom center;
+  backdrop-filter: blur(18px);
+}
+
+.earthquake-info-panel--scaled {
+  --earthquake-info-panel-scale: 1.5;
+}
+
+.earthquake-info-panel--top {
+  top: 22px;
+  bottom: auto;
+  transform-origin: top center;
+}
+
+.earthquake-info-panel--bottom {
+  bottom: 22px;
+  transform-origin: bottom center;
+}
+
+.earthquake-info-panel--left,
+.earthquake-info-panel--right {
+  top: 50%;
+  bottom: auto;
+  width: min(360px, calc(100vw - 44px));
+  max-height: calc(100vh - 44px);
+  transform: translateY(-50%) scale(var(--earthquake-info-panel-scale));
+}
+
+.earthquake-info-panel--left {
+  left: 22px;
+  right: auto;
+  transform-origin: left center;
+}
+
+.earthquake-info-panel--right {
+  left: auto;
+  right: 22px;
+  transform-origin: right center;
+}
+
+.earthquake-info-panel::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  height: 1px;
+  content: "";
+  background: linear-gradient(
+    90deg,
+    rgba(129, 230, 217, 0),
+    rgba(129, 230, 217, 0.72),
+    rgba(255, 102, 102, 0.62),
+    rgba(129, 230, 217, 0)
+  );
+}
+
+.earthquake-info-panel > * {
+  position: relative;
+  z-index: 2;
+}
+
+.earthquake-info-panel .window {
+  width: 100%;
+  height: auto;
+}
+
+.earthquake-info-panel .intensity-display {
+  grid-template-rows:
+    [eqinfo] 200px
+    [infobanner] 45px;
+}
+
+.earthquake-info-panel .intensity-display--foreign {
+  grid-template-rows:
+    [eqinfo] 200px
+    [infobanner] 45px
+    [foreignbanner] 45px;
+}
+
+.earthquake-info-panel .eew-display {
+  height: 285px;
+  grid-template-rows:
+    [eewtype] 45px
+    [eewadvice] 40px
+    [eewinfo] 200px;
+}
+
+.earthquake-info-panel .earthquake-info,
+.earthquake-info-panel .eew-earthquake-info {
+  width: calc(100% - 275px);
+}
+
+.earthquake-info-panel .banner-foreign {
+  width: 100% !important;
+}
+
+.earthquake-info-panel .flags {
+  top: 10px;
+  left: 10px;
+  border-radius: 6px;
+}
+
+.earthquake-info-panel .drill-flag {
+  left: auto;
+  right: 10px;
+}
+
+.earthquake-info-panel .eew-intensity-add {
+  position: static;
+  transform: translateY(-0.4em);
+}
+
+.earthquake-info-panel--vertical .intensity-display {
+  grid-template-rows:
+    [eqinfo] auto
+    [infobanner] 45px;
+}
+
+.earthquake-info-panel--vertical .intensity-display--foreign {
+  grid-template-rows:
+    [eqinfo] auto
+    [infobanner] 45px
+    [foreignbanner] 45px;
+}
+
+.earthquake-info-panel.earthquake-info-panel--vertical .earthquake-description,
+.earthquake-info-panel.earthquake-info-panel--vertical .eew-earthquake {
+  display: flex !important;
+  flex-direction: column !important;
+  height: auto !important;
+}
+
+.earthquake-info-panel.earthquake-info-panel--vertical .intensity-icon {
+  width: 100% !important;
+  height: 170px !important;
+  border-right: 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.earthquake-info-panel.earthquake-info-panel--vertical .intensity-wrapper {
+  width: 100% !important;
+  height: 230px !important;
+  border-right: 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.earthquake-info-panel.earthquake-info-panel--vertical
+  .intensity-wrapper
+  .intensity-icon {
+  height: 50% !important;
+}
+
+.earthquake-info-panel.earthquake-info-panel--vertical .earthquake-info,
+.earthquake-info-panel.earthquake-info-panel--vertical .eew-earthquake-info {
+  width: 100% !important;
+  min-height: 220px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-left: 0 !important;
+}
+
+.earthquake-info-panel.earthquake-info-panel--vertical
+  .earthquake-primary
+  .earthquake-description-row {
+  height: 100%;
+  padding: 7px 10px;
+}
+
+.earthquake-info-panel.earthquake-info-panel--vertical
+  .earthquake-primary
+  .earthquake-description-value {
+  font-size: 33px;
+  line-height: 1.05;
+}
+
+.earthquake-info-panel.earthquake-info-panel--vertical .intensity-add {
+  transform: translateY(-1em);
+}
+
+.earthquake-info-panel.earthquake-info-panel--vertical .earthquake-metrics {
+  height: 100%;
+}
+
+.earthquake-info-panel.earthquake-info-panel--vertical
+  .earthquake-metrics
+  .earthquake-description-row {
+  min-height: 0;
+  height: 100%;
+  padding: 10px 12px;
+}
+
+.earthquake-info-panel.earthquake-info-panel--vertical
+  .earthquake-metrics
+  .earthquake-description-value {
+  font-size: 31px;
+}
+
+.earthquake-info-panel--vertical .eew-display {
+  height: auto;
+  grid-template-rows:
+    [eewtype] 45px
+    [eewadvice] 40px
+    [eewinfo] auto;
+}
+
+.earthquake-info-panel--vertical .eew-information {
+  min-height: 40px;
+}
+
+.earthquake-map-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #d8e2ea;
+  font-size: 15px;
+  background: #181d20;
+}
+
+.earthquake-map-page .maplibregl-ctrl-top-right {
+  top: 22px;
+  right: 22px;
+  z-index: 380;
+}
+
+.earthquake-map-page .maplibregl-ctrl-bottom-right {
+  right: 18px;
+  bottom: 18px;
+  z-index: 380;
+}
+
+.earthquake-map-page .maplibregl-ctrl-group {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(13, 19, 22, 0.76);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(12px);
+}
+
+.earthquake-map-page .maplibregl-ctrl button {
+  width: 36px;
+  height: 36px;
+  background-color: transparent;
+}
+
+.earthquake-map-page .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(1.35);
+}
+
+.earthquake-map-page .maplibregl-ctrl button + button {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+.earthquake-map-page .maplibregl-ctrl-attrib {
+  border-radius: 6px;
+  background: rgba(13, 19, 22, 0.66);
+  color: #d8e2ea;
+  backdrop-filter: blur(12px);
+}
+
+@media (max-width: 820px) {
+  .earthquake-info-panel:not(.earthquake-info-panel--vertical) {
+    left: 50%;
+    bottom: 12px;
+    width: 920px;
+    max-width: none;
+    transform: translateX(-50%)
+      scale(calc(((100vw - 24px) / 920) * var(--earthquake-info-panel-scale)));
+    transform-origin: bottom center;
+  }
+
+  .earthquake-info-panel--top:not(.earthquake-info-panel--vertical) {
+    top: 12px;
+    bottom: auto;
+    transform-origin: top center;
+  }
+
+  .earthquake-info-panel--vertical {
+    top: 12px;
+    bottom: auto;
+    width: min(360px, calc(100vw - 24px));
+    max-height: calc(100vh - 24px);
+    transform: scale(var(--earthquake-info-panel-scale));
+  }
+
+  .earthquake-info-panel--left {
+    left: 12px;
+    right: auto;
+    transform-origin: top left;
+  }
+
+  .earthquake-info-panel--right {
+    left: auto;
+    right: 12px;
+    transform-origin: top right;
+  }
+
+  .earthquake-map-page .maplibregl-ctrl-top-right {
+    top: 12px;
+    right: 12px;
+  }
 }
 </style>

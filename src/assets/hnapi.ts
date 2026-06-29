@@ -1,9 +1,7 @@
 import type { IFetchGeoJsonConfig } from "@/interfaces/parsing/GeoJson";
 import { useGeoJsonStore } from "@/stores/geojson";
 import type { App } from "vue";
-import * as Sentry from "@sentry/vue";
 import type { Router } from "vue-router";
-import { BrowserTracing } from "@sentry/tracing";
 
 class _ReqFailedErr extends Error {
   constructor(error: Error) {
@@ -26,7 +24,7 @@ class HNAPI {
     this.useProductionAPI = useProductionAPI;
     if (this.mode === "development") {
       if (!useProductionAPI) {
-        this.apiUrl = ["http://", "127.0.0.1:8001"];
+        this.apiUrl = ["http://", "10.0.0.50:8001"];
       } else {
         this.apiUrl = ["https://", "back.quake.daziannetwork.com"];
       }
@@ -97,23 +95,23 @@ class HNAPI {
   }
 
   initializeSentry(app: App, router: Router) {
-    Sentry.init({
-      app,
-      dsn: "https://32e5d1dfc4504687ae75b16fa1e7b1f2@sentry.mightyhub.net/4",
-      integrations: [
-        new BrowserTracing({
-          routingInstrumentation: Sentry.vueRouterInstrumentation(router),
-          tracePropagationTargets: [this.apiUrl[1]],
-        }),
-      ],
-      tracesSampleRate: this.mode === "production" ? 1.0 : 0,
-      sampleRate: this.mode === "production" ? 1.0 : 0,
-      environment: this.mode,
-      release: `quakemap-front@${this.version}`,
-      logErrors: true,
-    });
-
-    hnapi.info("Sentry initialized.");
+    // Sentry.init({
+    //   app,
+    //   dsn: "https://32e5d1dfc4504687ae75b16fa1e7b1f2@sentry.mightyhub.net/4",
+    //   integrations: [
+    //     new BrowserTracing({
+    //       routingInstrumentation: Sentry.vueRouterInstrumentation(router),
+    //       tracePropagationTargets: [this.apiUrl[1]],
+    //     }),
+    //   ],
+    //   tracesSampleRate: this.mode === "production" ? 1.0 : 0,
+    //   sampleRate: this.mode === "production" ? 1.0 : 0,
+    //   environment: this.mode,
+    //   release: `quakemap-front@${this.version}`,
+    //   logErrors: true,
+    // });
+    //
+    // hnapi.info("Sentry initialized.");
   }
 
   async initialize(fetchGeoJsonConfig: IFetchGeoJsonConfig): Promise<void> {
@@ -178,5 +176,5 @@ class HNAPI {
   }
 }
 
-const hnapi = new HNAPI();
+const hnapi = new HNAPI(true);
 export default hnapi;

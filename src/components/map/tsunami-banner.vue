@@ -34,25 +34,33 @@ const className = computed(() => {
 @import "@/assets/colors.scss";
 
 .banner-description {
-  background: $info-background-color;
-  border: 4px solid $border-color;
-  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(17, 24, 28, 0.72);
+  font-size: 17px;
   text-align: center;
   overflow: hidden;
-  line-height: 40px;
   font-weight: bolder;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 .banner-foreign {
-  width: 750px !important;
-  height: 40px !important;
+  width: 100% !important;
+  height: 45px !important;
   z-index: 999999;
-  border-top: 0 !important;
 }
 
 .no-tsunami {
-  color: white !important;
-  background: #6cc !important;
+  //color: white !important;
+  //background: #6685cc !important;
 }
 
 .risk-evaluating {
