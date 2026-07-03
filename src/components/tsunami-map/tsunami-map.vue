@@ -26,7 +26,10 @@
             <small>Expected Height</small>
             <strong>{{ currentTourStop.expectedHeight }}</strong>
           </span>
-          <span class="tsunami-tour-panel__fact">
+          <span
+            class="tsunami-tour-panel__fact"
+            v-if="currentTourStop.arrival.trim() !== 'Unknown'"
+          >
             <small>First Arrival</small>
             <strong>{{ currentTourStop.arrival }}</strong>
           </span>
@@ -685,7 +688,7 @@ function buildCoastlineWarnings(
 ): FeatureCollection<Geometry, CoastlineWarningProperties> {
   const features: Feature<Geometry, CoastlineWarningProperties>[] = [];
   areas.forEach((area) => {
-    if (!isWarningGrade(area.grade)) {
+    if (!isWarningGrade(area.grade) && props.fetchType !== "forecast") {
       return;
     }
 
@@ -1348,12 +1351,14 @@ function setAreaNameMarkers(
         feature.properties.expectedHeight
       )
     );
-    element.appendChild(
-      createAreaNameMarkerLine(
-        "tsunami-area-height-label__arrival",
-        feature.properties.arrival
-      )
-    );
+    if (feature.properties.arrival !== "Unknown") {
+      element.appendChild(
+        createAreaNameMarkerLine(
+          "tsunami-area-height-label__arrival",
+          feature.properties.arrival
+        )
+      );
+    }
     areaNameOverlay.value!.appendChild(element);
 
     areaNameMarkers.push({
