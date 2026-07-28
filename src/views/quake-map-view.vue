@@ -109,6 +109,18 @@ const infoPanelOrientation = computed<InfoPanelOrientation>(() => {
   return isInfoPanelOrientation(orientation) ? orientation : "bottom";
 });
 
+function getObjectEntryCount(value: unknown): number {
+  if (value === null || typeof value !== "object") {
+    return 0;
+  }
+
+  return Object.keys(value).length;
+}
+
+function hasObjectEntries(value: unknown): value is Record<string, unknown> {
+  return getObjectEntryCount(value) > 0;
+}
+
 const isVerticalInfoPanel = computed(
   () =>
     infoPanelOrientation.value === "left" ||
@@ -293,22 +305,24 @@ function parseEEWInformation(result: IInfo, mapUpdateOnly = false) {
   }
   quakeMapInstance.value.deleteAllLayers();
   quakeMapInstance.value.addEpicenter(result.eew.hypocenter);
-  if (result.eew.area_coloring.recommended_areas) {
-    if (!isEqual({}, result.eew.area_coloring.areas)) {
-      quakeMapInstance.value.addMapIntensities(result.eew.area_coloring.areas);
-      quakeMapInstance.value.addMapColoring(result.eew.area_coloring.areas);
+  const coloringAreas = result.eew.area_coloring?.areas;
+  const eewAreaIntensity = result.eew.area_intensity;
+  if (result.eew.area_coloring?.recommended_areas) {
+    if (hasObjectEntries(coloringAreas)) {
+      quakeMapInstance.value.addMapIntensities(coloringAreas);
+      quakeMapInstance.value.addMapColoring(coloringAreas);
     } else {
       hnapi.warn("Areas equals null. Check server status.");
 
-      if (!isEqual(result.eew.area_intensity, {})) {
-        quakeMapInstance.value.addMapIntensities(result.eew.area_intensity);
+      if (hasObjectEntries(eewAreaIntensity)) {
+        quakeMapInstance.value.addMapIntensities(eewAreaIntensity);
       } else {
         hnapi.warn("No points exist. Check server status.");
       }
     }
   } else {
-    if (!isEqual(result.eew.area_intensity, {})) {
-      quakeMapInstance.value.addMapIntensities(result.eew.area_intensity);
+    if (hasObjectEntries(eewAreaIntensity)) {
+      quakeMapInstance.value.addMapIntensities(eewAreaIntensity);
     } else {
       hnapi.warn("No points exist. Check server status.");
     }
@@ -393,9 +407,10 @@ function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
     finalInfo = result.info;
   }
   finalInfo.forEach((content: IQuakeInfo) => {
+    const stationIntensities = content.area_intensity?.station;
     const useSymbolIntensityStyle =
       content.type === "DetailScale" &&
-      Object.keys(content.area_intensity.station).length >= 250;
+      getObjectEntryCount(stationIntensities) >= 250;
     symbolIntensityStyleActive.value = useSymbolIntensityStyle;
     eqStore.currentType = content.type;
     if (
@@ -416,8 +431,9 @@ function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
       });
       quakeMapInstance.value!.deleteAllLayers();
       nextTick(() => {
-        quakeMapInstance.value!.addMapIntensities(content.area_intensity.areas);
-        quakeMapInstance.value!.addMapColoring(content.area_intensity.areas);
+        const areaIntensities = content.area_intensity?.areas;
+        quakeMapInstance.value!.addMapIntensities(areaIntensities);
+        quakeMapInstance.value!.addMapColoring(areaIntensities);
         setBannerContent({
           domestic: content.tsunami_comments.domestic,
           foreign: content.tsunami_comments.foreign,
@@ -448,8 +464,9 @@ function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
           foreign: content.tsunami_comments.foreign,
         });
         quakeMapInstance.value!.addEpicenter(content.hypocenter);
-        quakeMapInstance.value!.addMapIntensities(content.area_intensity.areas);
-        quakeMapInstance.value!.addMapColoring(content.area_intensity.areas);
+        const areaIntensities = content.area_intensity?.areas;
+        quakeMapInstance.value!.addMapIntensities(areaIntensities);
+        quakeMapInstance.value!.addMapColoring(areaIntensities);
         quakeMapInstance.value!.parseMapScale();
       });
     } else if (content.type === "DetailScale") {
@@ -457,7 +474,7 @@ function parseEarthquakeInformation(result: IInfo | IInfoMocked) {
       eqStore.maximumIntensity = content.max_intensity;
       quakeMapInstance.value!.deleteAllLayers();
       nextTick(() => {
-        const stations = content.area_intensity.station;
+        const stations = content.area_intensity?.station;
         quakeMapInstance.value!.addMapIntensities(
           stations,
           useSymbolIntensityStyle

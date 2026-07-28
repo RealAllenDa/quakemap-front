@@ -80,6 +80,10 @@ interface IntensityMarkerStyle {
   sortKey: number;
 }
 
+type IntensityCollection = AllStationIntensities | AllAreaIntensities;
+type NullableIntensityCollection = IntensityCollection | null | undefined;
+type NullableAreaIntensityCollection = AllAreaIntensities | null | undefined;
+
 let intensityMarkerData: FeatureCollection<Point, IntensityMarkerProperties> =
   emptyIntensityMarkerData();
 const intensityMarkerCoordinates: [number, number][] = [];
@@ -279,11 +283,11 @@ function removeWaveLayer(sourceId: string): void {
 }
 
 function addMapIntensities(
-  intensity: AllStationIntensities | AllAreaIntensities,
+  intensity: NullableIntensityCollection,
   useSymbolStyle = false
 ): void {
   runWhenReady(() => {
-    if (intensity === undefined) {
+    if (!hasIntensityEntries(intensity)) {
       console.warn("no intensities available");
       return;
     }
@@ -298,8 +302,12 @@ function addMapIntensities(
 }
 
 function addMarkerStyleIntensities(
-  intensity: AllStationIntensities | AllAreaIntensities
+  intensity: NullableIntensityCollection
 ): void {
+  if (!hasIntensityEntries(intensity)) {
+    return;
+  }
+
   Object.values(intensity).forEach((content) => {
     const longitude = Number(content.longitude);
     const latitude = Number(content.latitude);
@@ -359,8 +367,12 @@ function applyLongPeriodWarning(
 }
 
 function addSymbolStyleIntensities(
-  intensity: AllStationIntensities | AllAreaIntensities
+  intensity: NullableIntensityCollection
 ): void {
+  if (!hasIntensityEntries(intensity)) {
+    return;
+  }
+
   const features: Feature<Point, IntensityMarkerProperties>[] = [];
 
   Object.values(intensity).forEach((content) => {
@@ -697,10 +709,15 @@ function addEpicenter(content: IHypocenter): void {
   });
 }
 
-function addMapColoring(intensity: AllAreaIntensities): void {
+function addMapColoring(intensity: NullableAreaIntensityCollection): void {
   runWhenReady(() => {
-    areaIntensityToColor(intensity);
     removeAreaColoring();
+    areaIntensityToColor(intensity);
+
+    if (areaColoring.value.areas.length === 0) {
+      hnapi.warn("No area coloring available.");
+      return;
+    }
 
     const data = filterFeatureCollection(
       toRaw(geoJsonStore.japanWithSubAreas!) as FeatureCollection,
@@ -1062,11 +1079,18 @@ function flattenPositions(value: unknown): Position[] {
   return value.flatMap((entry) => flattenPositions(entry));
 }
 
-function areaIntensityToColor(intensity: AllAreaIntensities): void {
+function areaIntensityToColor(
+  intensity: NullableAreaIntensityCollection
+): void {
   areaColoring.value = {
     colors: {},
     areas: [],
   };
+
+  if (!hasIntensityEntries(intensity)) {
+    return;
+  }
+
   for (const i in intensity) {
     const color =
       intensityStore.intensityColors[intensity[i].intensity] ?? "#666666";
@@ -1077,6 +1101,17 @@ function areaIntensityToColor(intensity: AllAreaIntensities): void {
 
 function filterMapColoring(feature: IGeoJsonFeature): boolean {
   return areaColoring.value.areas.indexOf(feature.properties.name) !== -1;
+}
+
+function hasIntensityEntries(
+  intensity: NullableIntensityCollection
+): intensity is IntensityCollection {
+  return (
+    intensity !== null &&
+    intensity !== undefined &&
+    typeof intensity === "object" &&
+    Object.keys(intensity).length > 0
+  );
 }
 
 function degreesToRadians(value: number): number {

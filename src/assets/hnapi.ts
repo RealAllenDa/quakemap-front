@@ -24,7 +24,7 @@ class HNAPI {
     this.useProductionAPI = useProductionAPI;
     if (this.mode === "development") {
       if (!useProductionAPI) {
-        this.apiUrl = ["http://", "10.0.0.50:8001"];
+        this.apiUrl = ["http://", "10.0.0.50:9090"];
       } else {
         this.apiUrl = ["https://", "back.quake.daziannetwork.com"];
       }
@@ -176,5 +176,5 @@ class HNAPI {
   }
 }
 
-const hnapi = new HNAPI(true);
+const hnapi = new HNAPI();
 export default hnapi;

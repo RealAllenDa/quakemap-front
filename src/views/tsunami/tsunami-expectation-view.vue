@@ -109,13 +109,17 @@ function resetTsunami() {
 }
 
 function sortByArrivalTime(
-  areas: ITsunamiExpectationAreas[]
+  areas: ITsunamiExpectationAreas[] | null | undefined
 ): ITsunamiExpectationAreas[] {
+  if (!Array.isArray(areas)) {
+    return [];
+  }
+
   // Final areaEntries:
   // [ ["name", ...], ["", ...], ["", ...], ["", ...] ]
   let areaEntries: [string, any][][] = [];
-  Object.entries(areas).forEach((content) => {
-    areaEntries.push(Object.entries(content[1]));
+  areas.forEach((content) => {
+    areaEntries.push(Object.entries(content));
   });
 
   areaEntries.sort((f1, f2) => {

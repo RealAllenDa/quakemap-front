@@ -85,15 +85,20 @@ function setWatchInfo(result: ITsunamiObservation) {
     showTimer.value = null;
     clearTsunamiInfo();
   }
+
+  // Sort array
+  let copiedResult = cloneDeep(result.areas);
+  if (!Array.isArray(copiedResult) || copiedResult.length === 0) {
+    resetTsunami();
+    return;
+  }
+
   displayOverlay.value = false;
   receiveTime.value = result.receive_time!;
 
-  // Sort array
-  let copiedResult = cloneDeep(result.areas!);
   let areaEntries: [string, any][][] = [];
-  Object.entries(copiedResult).forEach((content) => {
-    // noinspection JSCheckFunctionSignatures
-    areaEntries.push(Object.entries(content[1]));
+  copiedResult.forEach((content) => {
+    areaEntries.push(Object.entries(content));
   });
   areaEntries.sort((f1, f2) => {
     var a = parseFloat(f1[1][1]);
