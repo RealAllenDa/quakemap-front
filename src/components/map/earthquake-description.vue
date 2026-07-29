@@ -78,6 +78,7 @@ const metricClass = computed(() => ({
   color: #f7fafc;
   font-size: 21px;
   font-weight: 800;
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
