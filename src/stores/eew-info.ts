@@ -24,8 +24,7 @@ export const useEEWInfoStore = defineStore("eewInfo", {
     eewAdvice: "Fetching",
     eewTypesBanner: {
       PLUM: {
-        text:
-          "PLUM determined epicenter - " + "No detailed information available",
+        text: "PLUM determined epicenter",
         className: "info-background",
       },
       Forecast: {
@@ -51,7 +50,7 @@ export const useEEWInfoStore = defineStore("eewInfo", {
         className: "intensity-2",
       },
       Deep: {
-        text: "Deep earthquake - Information might not be accurate",
+        text: "Deep earthquake",
         className: "deep-earthquake",
       },
       Wait: {
